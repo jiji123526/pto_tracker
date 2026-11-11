@@ -820,7 +820,9 @@
   }
 
   function renderVacations() {
-    const sorted = [...state.vacations].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const sorted = [...state.vacations].sort((a, b) => (
+      b.startDate.localeCompare(a.startDate) || b.endDate.localeCompare(a.endDate)
+    ));
     const hasLogs = sorted.length > 0;
     const stdTotal = sorted.filter(item => item.type === "std").reduce((sum, item) => sum + leaveTotalHours(item), 0);
     const flexTotal = sorted.filter(item => item.type === "flex").reduce((sum, item) => sum + leaveTotalHours(item), 0);

@@ -955,6 +955,11 @@ dialog::backdrop {
   border-radius: 8px;
 }
 
+.vacation-empty[hidden],
+.vacation-table-wrap[hidden] {
+  display: none;
+}
+
 .vacation-empty-icon {
   display: grid;
   place-items: center;
