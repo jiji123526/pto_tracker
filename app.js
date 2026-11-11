@@ -562,19 +562,18 @@
         <circle id="chart-hover-flex" cx="${x(0)}" cy="${y(points[0].flex)}" r="4" fill="#059669" stroke="#fff" stroke-width="2"/>
         <circle id="chart-hover-combined" cx="${x(0)}" cy="${y(points[0].combined)}" r="4" fill="#7c3aed" stroke="#fff" stroke-width="2"/>
       </g>
-      <rect id="chart-hover-target" x="${left}" y="${top}" width="${graphWidth}" height="${graphHeight}" fill="transparent" pointer-events="all"/>
       ${xLabels}
       <text x="${left + graphWidth / 2}" y="${height - 4}" text-anchor="middle" fill="#66727d" font-size="11">weeks from now</text>
+      <rect id="chart-hover-target" x="0" y="0" width="${width}" height="${height}" fill="transparent" pointer-events="all"/>
     `;
     bindChartHover(points, { width, left, top, graphWidth, graphHeight });
   }
 
   function bindChartHover(points, chart) {
     const svg = $("chart");
-    const target = $("chart-hover-target");
     const hover = $("chart-hover");
     const tooltip = $("chart-tooltip");
-    if (!svg || !target || !hover || !tooltip) return;
+    if (!svg || !hover || !tooltip) return;
 
     function hide() {
       hover.setAttribute("display", "none");
@@ -582,10 +581,13 @@
     }
 
     function show(event) {
-      const bounds = svg.getBoundingClientRect();
-      if (!bounds.width || !bounds.height) return;
-      const svgX = ((event.clientX - bounds.left) / bounds.width) * 760;
-      const clampedX = Math.max(chart.left, Math.min(chart.left + chart.graphWidth, svgX));
+      const screenPoint = svg.createSVGPoint();
+      screenPoint.x = event.clientX;
+      screenPoint.y = event.clientY;
+      const transform = svg.getScreenCTM();
+      if (!transform) return;
+      const svgPoint = screenPoint.matrixTransform(transform.inverse());
+      const clampedX = Math.max(chart.left, Math.min(chart.left + chart.graphWidth, svgPoint.x));
       const week = Math.max(0, Math.min(52, Math.round(((clampedX - chart.left) / chart.graphWidth) * 52)));
       const point = points[week];
       const pointX = chart.left + (week / 52) * chart.graphWidth;
@@ -623,9 +625,9 @@
       return chart.top + chart.graphHeight - (Math.max(0, value) / (maxValue || 1)) * chart.graphHeight;
     }
 
-    target.addEventListener("mousemove", show);
-    target.addEventListener("mouseenter", show);
-    target.addEventListener("mouseleave", hide);
+    svg.addEventListener("pointermove", show);
+    svg.addEventListener("pointerenter", show);
+    svg.addEventListener("pointerleave", hide);
     window.addEventListener("blur", hide);
   }
 

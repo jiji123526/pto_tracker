@@ -794,6 +794,27 @@ dialog::backdrop {
 #backup-section > .actions { margin-left: 12px; margin-right: 12px; }
 #backup-section > .actions { margin-bottom: 14px; }
 
+#backup-section > .actions {
+  gap: 12px;
+}
+
+#export-button,
+#reset-button,
+.backup-import-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 17px;
+  border-radius: 22px;
+  font-weight: 700;
+}
+
+.backup-import-label {
+  cursor: pointer;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+}
+
 footer {
   margin-top: 18px;
   color: var(--muted);
