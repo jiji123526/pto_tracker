@@ -6,15 +6,16 @@
   const STANDARD_CAP_MIN = 160 * 60;
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
   const DEFAULT_STATE = {
-    employmentType: "hourly",
-    employeeClass: "F",
-    payFrequency: "weekly",
-    hireDate: "2026-02-02",
-    balanceAsOf: "2026-11-11",
+    configured: false,
+    employmentType: "",
+    employeeClass: "",
+    payFrequency: "",
+    hireDate: "",
+    balanceAsOf: "",
     viewDate: "",
     viewDateSelected: false,
-    stdMin: 1480,
-    flexMin: 2133,
+    stdMin: 0,
+    flexMin: 0,
     vacations: []
   };
 
@@ -157,12 +158,21 @@
   }
 
   function normalizeState(raw) {
-    const next = { ...DEFAULT_STATE, ...(raw || {}) };
-    next.employmentType = next.employmentType === "salaried" ? "salaried" : "hourly";
-    next.employeeClass = ["F", "R", "H"].includes(next.employeeClass) ? next.employeeClass : "F";
-    next.payFrequency = ["weekly", "biweekly", "monthly"].includes(next.payFrequency) ? next.payFrequency : "weekly";
-    next.hireDate = safeDate(next.hireDate) ? next.hireDate : DEFAULT_STATE.hireDate;
-    next.balanceAsOf = safeDate(next.balanceAsOf) ? next.balanceAsOf : DEFAULT_STATE.balanceAsOf;
+    const source = raw || {};
+    const next = { ...DEFAULT_STATE, ...source };
+    const hasCompleteSettings = Boolean(
+      safeDate(source.hireDate)
+      && safeDate(source.balanceAsOf)
+      && ["hourly", "salaried"].includes(source.employmentType)
+      && ["F", "R", "H"].includes(source.employeeClass)
+      && ["weekly", "biweekly", "monthly"].includes(source.payFrequency)
+    );
+    next.configured = source.configured === true || hasCompleteSettings;
+    next.employmentType = ["hourly", "salaried"].includes(next.employmentType) ? next.employmentType : "";
+    next.employeeClass = ["F", "R", "H"].includes(next.employeeClass) ? next.employeeClass : "";
+    next.payFrequency = ["weekly", "biweekly", "monthly"].includes(next.payFrequency) ? next.payFrequency : "";
+    next.hireDate = safeDate(next.hireDate) ? next.hireDate : "";
+    next.balanceAsOf = safeDate(next.balanceAsOf) ? next.balanceAsOf : "";
     next.viewDate = safeDate(next.viewDate) ? next.viewDate : "";
     next.viewDateSelected = next.viewDateSelected === true && Boolean(next.viewDate);
     if (!next.viewDateSelected) next.viewDate = "";
@@ -258,7 +268,7 @@
 
   function balanceAt(targetDate) {
     const asOf = safeDate(state.balanceAsOf);
-    if (!asOf || !targetDate || targetDate < asOf) return null;
+    if (!state.configured || !asOf || !targetDate || targetDate < asOf) return null;
 
     let std = Math.min(STANDARD_CAP_MIN, state.stdMin);
     let flex = state.flexMin;
@@ -360,15 +370,16 @@
   function anniversaryWeek() {
     const today = todayDate();
     const hireDate = safeDate(state.hireDate);
+    if (!state.configured || !hireDate) return null;
     const anniversary = addYears(hireDate, yearsOfService(hireDate, today) + 1);
     const days = Math.ceil((anniversary - today) / MS_PER_DAY);
     return days > 0 ? Math.ceil(days / 7) : null;
   }
 
   function fillSettingsForm() {
-    $("employmentType").value = state.employmentType;
-    $("employeeClass").value = state.employeeClass;
-    $("payFrequency").value = state.payFrequency;
+    $("employmentType").value = state.employmentType || "";
+    $("employeeClass").value = state.employeeClass || "";
+    $("payFrequency").value = state.payFrequency || "";
     $("hireDate").value = state.hireDate;
     $("balanceAsOf").value = state.balanceAsOf;
     $("balanceAsOf").max = dateString(todayDate());
@@ -385,6 +396,7 @@
     const flexMinutes = Math.min(59, Math.max(0, Number($("flexMinutes").value) || 0));
     state = normalizeState({
       ...state,
+      configured: true,
       employmentType: $("employmentType").value,
       employeeClass: $("employeeClass").value,
       payFrequency: $("payFrequency").value,
@@ -397,33 +409,37 @@
 
   function renderBalances() {
     const current = liveBalance();
+    const configured = state.configured;
     const std = current ? current.std : state.stdMin;
     const flex = current ? current.flex : state.flexMin;
     const standardPercent = Math.min(100, Math.max(0, (std / STANDARD_CAP_MIN) * 100));
     const percent = Math.min(100, Math.max(0, (flex / FLEX_CAP_MIN) * 100));
     $("today-label").textContent = formatDate(dateString(todayDate()));
-    $("std-balance").textContent = formatMinutes(std);
-    $("flex-balance").textContent = formatMinutes(flex);
-    $("combined-balance").textContent = formatMinutes(std + flex);
-    $("total-balance").textContent = formatMinutes(std + flex);
-    $("flex-total-label").textContent = formatMinutes(flex);
-    $("std-total-label").textContent = formatMinutes(std);
+    $("std-balance").textContent = configured ? formatMinutes(std) : "—";
+    $("flex-balance").textContent = configured ? formatMinutes(flex) : "—";
+    $("combined-balance").textContent = configured ? formatMinutes(std + flex) : "—";
+    $("total-balance").textContent = configured ? formatMinutes(std + flex) : "—";
+    $("flex-total-label").textContent = configured ? formatMinutes(flex) : "—";
+    $("std-total-label").textContent = configured ? formatMinutes(std) : "—";
     $("std-progress").style.width = `${standardPercent}%`;
     $("std-progress").classList.toggle("amber", standardPercent > 90);
-    $("std-cap-label").textContent = `${Math.round(standardPercent)}% of 160h balance cap`;
+    $("std-cap-label").textContent = configured ? `${Math.round(standardPercent)}% of 160h balance cap` : "";
     const total = Math.max(0, std + flex);
     const flexShare = total ? Math.max(0, flex / total) * 100 : 0;
     $("flex-segment").style.width = `${flexShare}%`;
     $("std-segment").style.width = `${Math.max(0, 100 - flexShare)}%`;
     $("flex-progress").style.width = `${percent}%`;
     $("flex-progress").classList.toggle("amber", percent > 90);
-    $("flex-cap-label").textContent = `${Math.round(percent)}% of 108h rollover cap`;
-    const rate = standardRateHours(state, todayDate());
+    $("flex-cap-label").textContent = configured ? `${Math.round(percent)}% of 108h rollover cap` : "";
+    const rate = configured ? standardRateHours(state, todayDate()) : 0;
     const derivedRate = (state.employmentType === "hourly" && state.payFrequency === "monthly")
       || (state.employmentType === "salaried" && state.payFrequency === "weekly");
-    $("std-rate").textContent = `Current Standard rate: ${formatHours(rate)} per ${state.payFrequency} pay period${derivedRate ? " (derived)" : ""}`;
+    $("std-rate").textContent = configured
+      ? `Current Standard rate: ${formatHours(rate)} per ${state.payFrequency} pay period${derivedRate ? " (derived)" : ""}`
+      : "";
     const warnings = [];
-    if (!current) warnings.push("Your balance date is in the future, so a live balance is not available yet.");
+    if (!configured) warnings.push("Complete your status above to calculate your live balance.");
+    else if (!current) warnings.push("Your balance date is in the future, so a live balance is not available yet.");
     if (std < 0 || flex < 0) warnings.push("Not enough PTO for the logged usage.");
     if (std >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
     if (flex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
@@ -890,18 +906,18 @@
   });
 
   $("reset-button").addEventListener("click", () => {
-    if (!confirm("Reset all local PTO data to the default values?")) return;
+    if (!confirm("Reset all local PTO data?")) return;
     state = normalizeState(DEFAULT_STATE);
     saveState();
     render();
-    collapseSettings();
+    expandSettings();
     $("backup-status").textContent = "Reset.";
   });
 
   resetVacationForm();
   render();
   try {
-    if (localStorage.getItem(STORAGE_KEY)) collapseSettings();
+    if (localStorage.getItem(STORAGE_KEY) && state.configured) collapseSettings();
     else expandSettings();
   } catch {
     expandSettings();

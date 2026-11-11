@@ -463,65 +463,68 @@ th { color: var(--muted); font-weight: 700; }
 .vacation-form {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "date type hours"
+    "minutes . ."
+    "note note note";
   gap: 18px 22px;
   align-items: start;
 }
 
 .vacation-start-field {
-  grid-column: 1;
-  grid-row: 1;
+  grid-area: date;
 }
 
 #vacation-end-date-field {
-  grid-column: 2;
-  grid-row: 1;
+  grid-area: end;
 }
 
 .vacation-type-field {
-  grid-column: 2;
-  grid-row: 1;
+  grid-area: type;
 }
 
 .vacation-hours-field {
-  grid-column: 3;
-  grid-row: 1;
+  grid-area: hours;
 }
 
 .vacation-minutes-field {
-  grid-column: 1;
-  grid-row: 2;
+  grid-area: minutes;
 }
 
 #vacation-weekdays-field {
-  grid-column: 2;
-  grid-row: 2;
+  grid-area: weekdays;
 }
 
 .vacation-note-field {
-  grid-column: 1 / -1;
-  grid-row: 3;
+  grid-area: note;
 }
 
 .vacation-form.is-multi-day #vacation-end-date-field {
   display: block;
+  grid-area: end;
 }
 
 .vacation-form.is-multi-day .vacation-type-field {
-  grid-column: 3;
+  grid-area: type;
 }
 
 .vacation-form.is-multi-day .vacation-hours-field {
-  grid-column: 1;
-  grid-row: 2;
+  grid-area: hours;
 }
 
 .vacation-form.is-multi-day #vacation-weekdays-field {
-  grid-column: 2;
-  grid-row: 2;
+  grid-area: weekdays;
 }
 
 .vacation-form.is-multi-day .vacation-note-field {
-  grid-row: 3;
+  grid-area: note;
+}
+
+.vacation-form.is-multi-day {
+  grid-template-areas:
+    "date end type"
+    "hours weekdays weekdays"
+    "note note note";
 }
 
 .toggle-row {
@@ -778,6 +781,7 @@ footer {
   .vacation-form,
   .vacation-form.is-multi-day {
     grid-template-columns: 1fr;
+    grid-template-areas: none;
     gap: 14px;
   }
 
@@ -796,6 +800,7 @@ footer {
   .vacation-form.is-multi-day .vacation-note-field {
     grid-column: 1;
     grid-row: auto;
+    grid-area: auto;
   }
 
   .vacation-list {
