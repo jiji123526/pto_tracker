@@ -384,6 +384,47 @@
     };
   }
 
+  function plannedLeaveBands() {
+    const today = todayDate();
+    const projectionEnd = addDays(today, 52 * 7);
+    const bands = [];
+
+    state.vacations.forEach(leave => {
+      const dates = leaveUsageDates(leave)
+        .map(item => item.date)
+        .filter(date => date > today && date <= projectionEnd)
+        .sort((first, second) => first - second);
+      if (!dates.length) return;
+
+      let start = dates[0];
+      let end = dates[0];
+      for (let index = 1; index < dates.length; index += 1) {
+        const date = dates[index];
+        if ((date - end) / MS_PER_DAY <= 1) {
+          end = date;
+        } else {
+          bands.push({ leave, start, end });
+          start = date;
+          end = date;
+        }
+      }
+      bands.push({ leave, start, end });
+    });
+
+    return bands;
+  }
+
+  function plannedLeaveTotals() {
+    const today = todayDate();
+    return state.vacations.reduce((totals, leave) => {
+      leaveUsageDates(leave).forEach(({ date, hours }) => {
+        if (date < today) return;
+        totals[leave.type] += hours * 60;
+      });
+      return totals;
+    }, { std: 0, flex: 0 });
+  }
+
   function fillSettingsForm() {
     $("employmentType").value = state.employmentType || "";
     $("employeeClass").value = state.employeeClass || "";
@@ -415,22 +456,30 @@
   function renderBalances() {
     const current = liveBalance();
     const configured = state.configured;
-    const std = current ? current.std : state.stdMin;
-    const flex = current ? current.flex : state.flexMin;
-    const standardPercent = Math.min(100, Math.max(0, (std / STANDARD_CAP_MIN) * 100));
-    const percent = Math.min(100, Math.max(0, (flex / FLEX_CAP_MIN) * 100));
+    const currentStd = current ? current.std : state.stdMin;
+    const currentFlex = current ? current.flex : state.flexMin;
+    const planned = plannedLeaveTotals();
+    const availableStd = currentStd - planned.std;
+    const availableFlex = currentFlex - planned.flex;
+    const availableTotal = availableStd + availableFlex;
+    const standardPercent = Math.min(100, Math.max(0, (availableStd / STANDARD_CAP_MIN) * 100));
+    const percent = Math.min(100, Math.max(0, (availableFlex / FLEX_CAP_MIN) * 100));
     $("today-label").textContent = formatDate(dateString(todayDate()));
-    $("std-balance").textContent = configured ? formatMinutes(std) : "—";
-    $("flex-balance").textContent = configured ? formatMinutes(flex) : "—";
-    $("combined-balance").textContent = configured ? formatMinutes(std + flex) : "—";
-    $("total-balance").textContent = configured ? formatMinutes(std + flex) : "—";
-    $("flex-total-label").textContent = configured ? formatMinutes(flex) : "—";
-    $("std-total-label").textContent = configured ? formatMinutes(std) : "—";
+    $("std-current-balance").textContent = configured ? formatMinutes(currentStd) : "—";
+    $("std-planned-balance").textContent = configured ? formatMinutes(planned.std) : "—";
+    $("std-balance").textContent = configured ? formatMinutes(availableStd) : "—";
+    $("flex-current-balance").textContent = configured ? formatMinutes(currentFlex) : "—";
+    $("flex-planned-balance").textContent = configured ? formatMinutes(planned.flex) : "—";
+    $("flex-balance").textContent = configured ? formatMinutes(availableFlex) : "—";
+    $("combined-balance").textContent = configured ? formatMinutes(availableTotal) : "—";
+    $("total-balance").textContent = configured ? formatMinutes(availableTotal) : "—";
+    $("flex-total-label").textContent = configured ? formatMinutes(availableFlex) : "—";
+    $("std-total-label").textContent = configured ? formatMinutes(availableStd) : "—";
     $("std-progress").style.width = `${standardPercent}%`;
     $("std-progress").classList.toggle("amber", standardPercent > 90);
     $("std-cap-label").textContent = configured ? `${Math.round(standardPercent)}% of 160h balance cap` : "";
-    const total = Math.max(0, std + flex);
-    const flexShare = total ? Math.max(0, flex / total) * 100 : 0;
+    const total = Math.max(0, availableStd) + Math.max(0, availableFlex);
+    const flexShare = total ? Math.max(0, availableFlex) / total * 100 : 0;
     $("flex-segment").style.width = `${flexShare}%`;
     $("std-segment").style.width = `${Math.max(0, 100 - flexShare)}%`;
     $("flex-progress").style.width = `${percent}%`;
@@ -444,9 +493,9 @@
       : "";
     const warnings = [];
     if (!configured) warnings.push("Complete your status above to calculate your live balance.");
-    if (std < 0 || flex < 0) warnings.push("Not enough PTO for the logged usage.");
-    if (std >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
-    if (flex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
+    if (availableStd < 0 || availableFlex < 0) warnings.push("Not enough PTO after planned time off.");
+    if (currentStd >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
+    if (currentFlex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
     $("policy-warning").innerHTML = warnings.length
       ? warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("")
       : `<div class="notice info">Live balance is calculated from today's saved balances.</div>`;
@@ -563,11 +612,28 @@
     const newYearLine = state.configured && newYear.weeks <= 52
       ? `<line x1="${x(newYear.weeks)}" y1="${top}" x2="${x(newYear.weeks)}" y2="${top + graphHeight}" stroke="#059669" stroke-dasharray="4 4"/><text x="${x(newYear.weeks) + 5}" y="${top + 28}" fill="#047857" font-size="11">New Year grant</text>`
       : "";
+    const leaveMarkers = plannedLeaveBands().map(({ leave, start, end }) => {
+      const today = todayDate();
+      const startWeek = (start - today) / (7 * MS_PER_DAY);
+      const endWeek = (end - today) / (7 * MS_PER_DAY);
+      const startX = x(startWeek);
+      const endX = x(endWeek);
+      const width = Math.max(2, endX - startX);
+      const typeLabel = leave.type === "std" ? "Standard" : "Flexible";
+      return `
+        <rect x="${startX}" y="${top}" width="${width}" height="${graphHeight}" fill="#c2410c" opacity=".10">
+          <title>Planned ${typeLabel} leave: ${formatDate(leave.startDate)}${leave.startDate === leave.endDate ? "" : ` – ${formatDate(leave.endDate)}`}</title>
+        </rect>
+        <line x1="${startX}" y1="${top}" x2="${startX}" y2="${top + graphHeight}" stroke="#c2410c" stroke-dasharray="2 3"/>
+        <line x1="${Math.max(startX, endX)}" y1="${top}" x2="${Math.max(startX, endX)}" y2="${top + graphHeight}" stroke="#c2410c" stroke-dasharray="2 3"/>
+      `;
+    }).join("");
     svg.innerHTML = `
       ${grid}
       <line x1="${left}" y1="${capY}" x2="${width - right}" y2="${capY}" stroke="#a16207" stroke-dasharray="6 4"/>
       ${annivLine}
       ${newYearLine}
+      ${leaveMarkers}
       <path d="${linePath("std")}" fill="none" stroke="#2563eb" stroke-width="2.5"/>
       <path d="${linePath("flex")}" fill="none" stroke="#059669" stroke-width="2.5"/>
       <path d="${linePath("combined")}" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
@@ -696,6 +762,34 @@
     window.addEventListener("blur", hide);
   }
 
+  function renderRequests() {
+    const today = todayDate();
+    const requests = [...state.vacations]
+      .filter(item => safeDate(item.endDate) >= today)
+      .sort((first, second) => first.startDate.localeCompare(second.startDate));
+
+    $("requests-list").innerHTML = requests.length
+      ? requests.map(item => {
+        const start = safeDate(item.startDate);
+        const isCurrent = start <= today;
+        const remainingHours = leaveUsageDates(item)
+          .filter(({ date }) => date >= today)
+          .reduce((total, entry) => total + entry.hours, 0);
+        const typeLabel = item.type === "std" ? "Standard PTO" : "Flexible PTO";
+        const note = item.note ? ` · ${escapeHtml(item.note)}` : "";
+        return `
+          <div class="request-row">
+            <div class="request-main">
+              <span class="request-title">${leaveDateLabel(item)}</span>
+            <span class="request-meta">${typeLabel} · ${formatMinutes(remainingHours * 60)}${note}</span>
+            </div>
+            <span class="request-status">${isCurrent ? "Current" : "Upcoming"}</span>
+          </div>
+        `;
+      }).join("")
+      : `<div class="requests-empty muted">No current or upcoming requests.</div>`;
+  }
+
   function renderVacations() {
     const sorted = [...state.vacations].sort((a, b) => a.startDate.localeCompare(b.startDate));
     const stdTotal = sorted.filter(item => item.type === "std").reduce((sum, item) => sum + leaveTotalHours(item), 0);
@@ -728,6 +822,7 @@
 
   function render() {
     fillSettingsForm();
+    renderRequests();
     renderBalances();
     renderSelectedDate();
     renderChart();
@@ -795,10 +890,21 @@
   vacationModal.addEventListener("click", event => {
     if (event.target === vacationModal) vacationModal.close();
   });
+  $("view-all-requests").addEventListener("click", () => openVacationModal(false));
+  document.querySelectorAll("[data-open-requests]").forEach(button => {
+    button.addEventListener("click", () => openVacationModal(false));
+  });
   $("guide-button").addEventListener("click", () => guideModal.showModal());
   $("guide-close").addEventListener("click", () => guideModal.close());
   guideModal.addEventListener("click", event => {
     if (event.target === guideModal) guideModal.close();
+  });
+
+  const balanceDefinitionsModal = $("balance-definitions-modal");
+  $("balance-definitions-button").addEventListener("click", () => balanceDefinitionsModal.showModal());
+  $("balance-definitions-close").addEventListener("click", () => balanceDefinitionsModal.close());
+  balanceDefinitionsModal.addEventListener("click", event => {
+    if (event.target === balanceDefinitionsModal) balanceDefinitionsModal.close();
   });
 
   function newLeaveId() {
@@ -936,6 +1042,7 @@
     const currentDate = dateString(new Date());
     if (currentDate === lastLiveDate) return;
     lastLiveDate = currentDate;
+    renderRequests();
     renderBalances();
     renderSelectedDate();
     renderChart();

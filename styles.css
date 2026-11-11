@@ -334,6 +334,60 @@ button.danger {
   padding: 0 12px;
 }
 
+.balance-details {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 10px;
+}
+
+.balance-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.balance-detail > span:first-child {
+  color: var(--muted);
+}
+
+.balance-detail strong {
+  white-space: nowrap;
+}
+
+.balance-detail-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.available-detail {
+  padding-top: 8px;
+  border-top: 1px dashed #cfd5dd;
+  font-weight: 700;
+}
+
+.available-detail > span:first-child {
+  color: var(--text);
+}
+
+.detail-action {
+  padding: 0 2px;
+  color: var(--orange);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 23px;
+  line-height: 16px;
+}
+
+.detail-action:hover {
+  filter: none;
+  color: #d94d00;
+}
+
 .card {
   min-height: 0;
   padding: 12px 0;
@@ -348,6 +402,83 @@ button.danger {
 }
 
 #current-section .combined-card { display: none; }
+
+.requests-list {
+  padding: 4px 12px 0;
+}
+
+.request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--soft-border);
+}
+
+.request-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.request-title {
+  font-weight: 700;
+}
+
+.request-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.request-status {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.requests-empty {
+  padding: 18px 8px;
+  font-size: 16px;
+}
+
+.requests-footer {
+  border-top: 1px solid var(--soft-border);
+  padding: 10px 12px;
+}
+
+.text-button {
+  padding: 4px 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+
+.text-button:hover {
+  filter: none;
+  text-decoration: underline;
+}
+
+.definition-dialog {
+  width: min(680px, calc(100% - 32px));
+}
+
+.definition-panel {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.definition-content {
+  padding: 4px 28px 24px;
+  font-size: 16px;
+}
+
+.definition-content p {
+  margin: 10px 0;
+}
 
 .card-kicker {
   display: flex;
@@ -548,8 +679,10 @@ button.danger {
 .legend .combined { color: #7c3aed; }
 .legend .cap { color: #a16207; }
 .legend .new-year { color: #059669; }
+.legend .planned { color: #c2410c; }
 .legend .cap::before { height: 0; background: transparent; border-top: 2px dashed currentColor; }
 .legend .new-year::before { height: 0; background: transparent; border-top: 2px dashed currentColor; }
+.legend .planned::before { height: 0; background: transparent; border-top: 2px dashed currentColor; }
 
 #vacation-form { padding: 16px 12px 0; }
 .vacation-list { padding: 0 12px 12px; }
@@ -926,6 +1059,14 @@ footer {
 
   .guide-content {
     padding: 2px 18px 18px;
+  }
+
+  .definition-content {
+    padding: 2px 18px 18px;
+  }
+
+  .request-row {
+    align-items: flex-start;
   }
 
   #vacation-form {

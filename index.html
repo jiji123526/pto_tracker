@@ -98,13 +98,31 @@
           </form>
         </section>
 
+        <section id="requests-section">
+          <div class="section-heading">
+            <h2 class="section-title-with-info">
+              <span>Current and upcoming requests</span>
+              <button class="info-button field-info-button" type="button" aria-label="About current and upcoming requests" title="Current and upcoming requests">i</button>
+            </h2>
+          </div>
+          <div id="requests-list" class="requests-list"></div>
+          <div class="requests-footer">
+            <button id="view-all-requests" class="text-button" type="button">View all requests</button>
+          </div>
+        </section>
+
         <section id="current-section">
-          <h2>Current balance</h2>
-          <p class="muted">Live estimate as of <span id="today-label"></span>. It uses today's saved balances and includes future accruals and logged usage.</p>
+          <div class="section-heading">
+            <h2 class="section-title-with-info">
+              <span>Time off balances</span>
+              <button id="balance-definitions-button" class="info-button field-info-button" type="button" aria-label="Explain time off balances" title="Balance definitions">i</button>
+            </h2>
+          </div>
+          <p class="muted">Current balances as of <span id="today-label"></span>, with planned time off deducted from available balances.</p>
           <div class="balance-overview">
             <div class="balance-total-label">Total Available Balance</div>
             <div id="total-balance" class="balance-total">—</div>
-            <div class="balance-bar" aria-label="Total balance split between Flexible and Standard PTO">
+            <div class="balance-bar" aria-label="Total available balance split between Flexible and Standard PTO">
               <div id="flex-segment"></div>
               <div id="std-segment"></div>
             </div>
@@ -116,7 +134,11 @@
           <div class="cards summary-cards">
             <div class="card summary-card standard-card">
               <div class="card-kicker"><span>Standard PTO</span><span class="card-icon">▣</span></div>
-              <div id="std-balance" class="balance">—</div>
+              <div class="balance-details">
+                <div class="balance-detail"><span>Current balance</span><strong id="std-current-balance">—</strong></div>
+                <div class="balance-detail"><span>Planned time off</span><span class="balance-detail-value"><strong id="std-planned-balance">—</strong><button class="detail-action" type="button" data-open-requests aria-label="View planned Standard PTO requests">›</button></span></div>
+                <div class="balance-detail available-detail"><span>Available balance</span><strong id="std-balance">—</strong></div>
+              </div>
               <div class="progress" aria-label="Standard PTO toward 160 hour balance cap">
                 <div id="std-progress"></div>
               </div>
@@ -125,7 +147,11 @@
             </div>
             <div class="card summary-card flex-card">
               <div class="card-kicker"><span>Flexible PTO</span><span class="card-icon">◒</span></div>
-              <div id="flex-balance" class="balance">—</div>
+              <div class="balance-details">
+                <div class="balance-detail"><span>Current balance</span><strong id="flex-current-balance">—</strong></div>
+                <div class="balance-detail"><span>Planned time off</span><span class="balance-detail-value"><strong id="flex-planned-balance">—</strong><button class="detail-action" type="button" data-open-requests aria-label="View planned Flexible PTO requests">›</button></span></div>
+                <div class="balance-detail available-detail"><span>Available balance</span><strong id="flex-balance">—</strong></div>
+              </div>
               <div class="progress" aria-label="Flexible PTO toward rollover cap">
                 <div id="flex-progress"></div>
               </div>
@@ -139,6 +165,23 @@
           </div>
           <div id="policy-warning"></div>
         </section>
+
+        <dialog id="balance-definitions-modal" class="definition-dialog" aria-labelledby="balance-definitions-title">
+          <div class="definition-panel">
+            <div class="modal-heading">
+              <div>
+                <h2 id="balance-definitions-title">Balance definitions</h2>
+              </div>
+              <button id="balance-definitions-close" class="secondary modal-close" type="button" aria-label="Close balance definitions">Close</button>
+            </div>
+            <div class="definition-content">
+              <p><strong>Current balance:</strong> Your balance as of today.</p>
+              <p><strong>Planned time off:</strong> The total PTO scheduled for today and future leave requests.</p>
+              <p><strong>Available balance:</strong> Your current balance minus planned time off.</p>
+              <p class="muted">Future accruals are reflected in the projection and date-based balance view.</p>
+            </div>
+          </div>
+        </dialog>
 
         <section id="date-section">
           <h2>Balance by date</h2>
@@ -198,6 +241,7 @@
             <span class="combined">Combined</span>
             <span class="cap">Flexible rollover cap</span>
             <span class="new-year">New Year grant</span>
+            <span class="planned">Planned leave</span>
           </div>
         </section>
 
