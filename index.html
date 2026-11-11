@@ -42,15 +42,24 @@
                   <option value="salaried">Salaried</option>
                 </select>
               </label>
-              <label>
-                Employee class
+              <div class="setting-field">
+                <div class="field-label">
+                  <label for="employeeClass">Employee class</label>
+                  <button id="employee-class-info" class="info-button field-info-button" type="button" aria-label="Explain employee class" aria-expanded="false" aria-controls="employee-class-popover" title="What is employee class?">i</button>
+                  <div id="employee-class-popover" class="field-popover" role="dialog" aria-labelledby="employee-class-popover-title" hidden>
+                    <div id="employee-class-popover-title" class="field-popover-title">Employee class</div>
+                    <div>F - Regular Full Time</div>
+                    <div>R - Regular Reduced Time (30+ Hrs)</div>
+                    <div>H - Regular Part Time (20+ Hrs)</div>
+                  </div>
+                </div>
                 <select id="employeeClass">
                   <option value="" selected disabled>Select employee class</option>
                   <option value="F">Class F</option>
                   <option value="R">Class R</option>
                   <option value="H">Class H</option>
                 </select>
-              </label>
+              </div>
               <label>
                 Pay frequency
                 <select id="payFrequency">

@@ -679,6 +679,39 @@
 
   $("settings-toggle").addEventListener("click", expandSettings);
 
+  const employeeClassInfo = $("employee-class-info");
+  const employeeClassPopover = $("employee-class-popover");
+
+  function closeEmployeeClassPopover() {
+    employeeClassPopover.hidden = true;
+    employeeClassInfo.setAttribute("aria-expanded", "false");
+  }
+
+  employeeClassInfo.addEventListener("click", event => {
+    event.stopPropagation();
+    const isOpen = !employeeClassPopover.hidden;
+    if (isOpen) {
+      closeEmployeeClassPopover();
+      return;
+    }
+    employeeClassPopover.hidden = false;
+    employeeClassInfo.setAttribute("aria-expanded", "true");
+  });
+
+  employeeClassPopover.addEventListener("click", event => {
+    event.stopPropagation();
+  });
+
+  document.addEventListener("click", () => {
+    if (!employeeClassPopover.hidden) closeEmployeeClassPopover();
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !employeeClassPopover.hidden) {
+      closeEmployeeClassPopover();
+    }
+  });
+
   const vacationModal = $("vacation-modal");
   const guideModal = $("guide-modal");
 

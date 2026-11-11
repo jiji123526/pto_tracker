@@ -164,6 +164,52 @@ section {
 label { display: block; font-weight: 700; }
 input, select, button { font: inherit; }
 
+.setting-field {
+  min-width: 0;
+}
+
+.field-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  font-weight: 700;
+}
+
+.field-label label {
+  display: inline;
+}
+
+.field-info-button {
+  width: 17px;
+  height: 17px;
+  font-size: 11px;
+}
+
+.field-popover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  left: 24px;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 48px));
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .16);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.field-popover-title {
+  margin-bottom: 3px;
+  font-weight: 700;
+}
+
 input, select {
   width: 100%;
   margin-top: 5px;
