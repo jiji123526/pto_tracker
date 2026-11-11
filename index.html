@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A simple local PTO tracker">
+  <title>PTO Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="app-main">
+      <header>
+        <div class="page-heading">
+          <div>
+            <h1>Time off &amp; leave</h1>
+          </div>
+          <div class="header-actions">
+            <button id="add-vacation-button" class="header-button" type="button">Add vacation</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section id="settings-section">
+          <div class="section-heading">
+            <h2>Your status</h2>
+            <div class="section-heading-actions">
+              <button id="settings-toggle" class="secondary small-button" type="button">Edit settings</button>
+              <small id="storage-note">Saved locally</small>
+            </div>
+          </div>
+          <form id="settings-form">
+            <div class="grid three">
+              <label>
+                Employment type
+                <select id="employmentType">
+                  <option value="hourly">Hourly</option>
+                  <option value="salaried">Salaried</option>
+                </select>
+              </label>
+              <label>
+                Employee class
+                <select id="employeeClass">
+                  <option value="F">Class F</option>
+                  <option value="R">Class R</option>
+                  <option value="H">Class H</option>
+                </select>
+              </label>
+              <label>
+                Pay frequency
+                <select id="payFrequency">
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Biweekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </label>
+              <label>
+                Hire date
+                <input id="hireDate" type="date" required>
+              </label>
+              <label>
+                Balances as of
+                <input id="balanceAsOf" type="date" required>
+              </label>
+              <div></div>
+              <label>
+                Standard PTO hours
+                <input id="stdHours" type="number" min="0" step="1" required>
+              </label>
+              <label>
+                Standard PTO minutes
+                <input id="stdMinutes" type="number" min="0" max="59" step="1" required>
+              </label>
+              <div></div>
+              <label>
+                Flexible PTO hours
+                <input id="flexHours" type="number" min="0" step="1" required>
+              </label>
+              <label>
+                Flexible PTO minutes
+                <input id="flexMinutes" type="number" min="0" max="59" step="1" required>
+              </label>
+            </div>
+            <div class="actions">
+              <button type="submit">Save status</button>
+              <span id="settings-status" class="status" aria-live="polite"></span>
+            </div>
+          </form>
+        </section>
+
+        <section id="current-section">
+          <h2>Current balance</h2>
+          <p class="muted">Live estimate as of <span id="today-label"></span>. It includes completed pay periods and logged usage since your balance date.</p>
+          <div class="balance-overview">
+            <div class="balance-total-label">Total Available Balance</div>
+            <div id="total-balance" class="balance-total">—</div>
+            <div class="balance-bar" aria-label="Total balance split between Flexible and Standard PTO">
+              <div id="flex-segment"></div>
+              <div id="std-segment"></div>
+            </div>
+            <div class="balance-bar-labels">
+              <span>Flexible PTO <strong id="flex-total-label">—</strong></span>
+              <span>Standard PTO <strong id="std-total-label">—</strong></span>
+            </div>
+          </div>
+          <div class="cards summary-cards">
+            <div class="card summary-card standard-card">
+              <div class="card-kicker"><span>Standard PTO</span><span class="card-icon">▣</span></div>
+              <div id="std-balance" class="balance">—</div>
+              <div class="progress" aria-label="Standard PTO toward 160 hour balance cap">
+                <div id="std-progress"></div>
+              </div>
+              <small id="std-cap-label" class="muted"></small>
+              <small id="std-rate" class="muted"></small>
+            </div>
+            <div class="card summary-card flex-card">
+              <div class="card-kicker"><span>Flexible PTO</span><span class="card-icon">◒</span></div>
+              <div id="flex-balance" class="balance">—</div>
+              <div class="progress" aria-label="Flexible PTO toward rollover cap">
+                <div id="flex-progress"></div>
+              </div>
+              <small id="flex-cap-label" class="muted"></small>
+            </div>
+            <div class="card summary-card combined-card">
+              <div class="card-kicker"><span>Combined balance</span><span class="card-icon">＋</span></div>
+              <div id="combined-balance" class="balance">—</div>
+              <small class="muted">Standard + Flexible</small>
+            </div>
+          </div>
+          <div id="policy-warning"></div>
+        </section>
+
+        <section id="date-section">
+          <h2>Balance by date</h2>
+          <p class="muted" id="view-date-copy">Choose a date to see your estimated balance. Planned vacation usage is included.</p>
+          <div class="balance-date-control">
+            <label>
+              See balance on
+              <input id="viewDate" type="date">
+            </label>
+            <div id="view-date-note" class="muted"></div>
+          </div>
+          <div id="view-balance-overview" class="balance-overview">
+            <div class="balance-total-label">Total Available Balance</div>
+            <div id="view-total-balance" class="balance-total">—</div>
+            <div class="balance-bar" aria-label="Total balance split between Flexible and Standard PTO on selected date">
+              <div id="view-flex-segment"></div>
+              <div id="view-std-segment"></div>
+            </div>
+            <div class="balance-bar-labels">
+              <span>Flexible PTO <strong id="view-flex-total-label">—</strong></span>
+              <span>Standard PTO <strong id="view-std-total-label">—</strong></span>
+            </div>
+          </div>
+          <div id="view-balance-cards" class="cards summary-cards">
+            <div class="card summary-card standard-card">
+              <div class="card-kicker"><span>Standard PTO</span></div>
+              <div id="view-std-balance" class="balance">—</div>
+              <div class="progress" aria-label="Standard PTO toward 160 hour balance cap on selected date">
+                <div id="view-std-progress"></div>
+              </div>
+              <small id="view-std-cap-label" class="muted"></small>
+            </div>
+            <div class="card summary-card flex-card">
+              <div class="card-kicker"><span>Flexible PTO</span></div>
+              <div id="view-flex-balance" class="balance">—</div>
+              <div class="progress" aria-label="Flexible PTO toward rollover cap on selected date">
+                <div id="view-flex-progress"></div>
+              </div>
+              <small id="view-flex-cap-label" class="muted"></small>
+            </div>
+          </div>
+          <div id="view-warning"></div>
+        </section>
+
+        <section id="projection-section">
+          <div class="section-heading">
+            <h2>52-week projection</h2>
+            <small>Includes logged vacation usage</small>
+          </div>
+          <div class="chart-wrap">
+            <svg id="chart" viewBox="0 0 760 300" role="img" aria-label="52-week PTO projection chart"></svg>
+          </div>
+          <div class="legend">
+            <span class="std">Standard</span>
+            <span class="flex">Flexible</span>
+            <span class="combined">Combined</span>
+            <span class="cap">Flexible rollover cap</span>
+          </div>
+        </section>
+
+        <dialog id="vacation-modal" aria-labelledby="vacation-modal-title">
+          <div class="modal-panel">
+            <div class="modal-heading">
+              <div>
+                <h2 id="vacation-modal-title">Vacation log</h2>
+                <p class="muted">Plan one-day or multi-day leave and see the projected balances after it.</p>
+              </div>
+              <button id="vacation-close" class="secondary modal-close" type="button" aria-label="Close vacation log">Close</button>
+            </div>
+            <form id="vacation-form">
+              <label class="toggle-row">
+                <input id="vacationMultiDay" type="checkbox">
+                <span>
+                  <strong>Multi-day leave</strong>
+                  <small>Use a date range and daily hours.</small>
+                </span>
+              </label>
+              <div class="vacation-form">
+                <label class="vacation-date-field vacation-start-field">
+                  <span id="vacation-date-label">Date</span>
+                  <input id="vacationStartDate" type="date" required>
+                </label>
+                <label id="vacation-end-date-field" class="vacation-date-field">
+                  End date
+                  <input id="vacationEndDate" type="date" required>
+                </label>
+                <label class="vacation-type-field">
+                  PTO type
+                  <select id="vacationType">
+                    <option value="flex">Flexible</option>
+                    <option value="std">Standard</option>
+                  </select>
+                </label>
+                <label class="vacation-hours-field">
+                  <span id="vacation-hours-label">Hours</span>
+                  <input id="vacationHoursPerDay" type="number" min="0" step="1" value="8" required>
+                </label>
+                <label id="vacation-minutes-field" class="vacation-minutes-field">
+                  Minutes
+                  <input id="vacationMinutes" type="number" min="0" max="59" step="1" value="0">
+                </label>
+                <label id="vacation-weekdays-field" class="checkbox-label">
+                  <input id="vacationWeekdaysOnly" type="checkbox">
+                  Weekdays only
+                </label>
+                <label class="vacation-note-field">
+                  Note
+                  <input id="vacationNote" type="text" maxlength="120" placeholder="Optional">
+                </label>
+              </div>
+              <div id="vacation-preview" class="leave-preview" aria-live="polite">Choose dates to preview this leave.</div>
+              <div class="actions">
+                <button type="submit">Add vacation</button>
+                <span id="vacation-status" class="status" aria-live="polite"></span>
+              </div>
+            </form>
+            <div class="vacation-list">
+              <div id="vacation-summary" class="muted"></div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Dates</th><th>Type</th><th>Leave</th><th>Balance after leave</th><th>Note</th><th></th></tr>
+                  </thead>
+                  <tbody id="vacations"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </dialog>
+
+        <section id="policy-section">
+          <details>
+            <summary>Policy reference</summary>
+            <p class="muted">Source: Policy: Paid Time Off (Washington) - US, dated Aug 27, 2025. Effective Jan 5, 2025. This app uses the accrual tables and caps from that policy.</p>
+            <h3>Standard PTO annual accrual, hourly</h3>
+            <div class="policy-table">
+              <table>
+                <thead><tr><th>Years of service</th><th>Class F</th><th>Class R</th><th>Class H</th></tr></thead>
+                <tbody>
+                  <tr><td>0</td><td>32h</td><td>22h</td><td>15h</td></tr>
+                  <tr><td>1</td><td>72h</td><td>52h</td><td>35h</td></tr>
+                  <tr><td>2</td><td>80h</td><td>58h</td><td>39h</td></tr>
+                  <tr><td>3</td><td>88h</td><td>64h</td><td>43h</td></tr>
+                  <tr><td>4</td><td>96h</td><td>70h</td><td>47h</td></tr>
+                  <tr><td>5</td><td>104h</td><td>76h</td><td>51h</td></tr>
+                  <tr><td>6+</td><td>112h</td><td>82h</td><td>55h</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h3 style="margin-top:20px">Standard PTO per pay period, hourly — weekly</h3>
+            <div class="policy-table">
+              <table>
+                <thead><tr><th>Years of service</th><th>Class F</th><th>Class R</th><th>Class H</th></tr></thead>
+                <tbody>
+                  <tr><td>0</td><td>0.62h</td><td>0.43h</td><td>0.29h</td></tr>
+                  <tr><td>1</td><td>1.39h</td><td>1.00h</td><td>0.68h</td></tr>
+                  <tr><td>2</td><td>1.54h</td><td>1.12h</td><td>0.75h</td></tr>
+                  <tr><td>3</td><td>1.70h</td><td>1.24h</td><td>0.83h</td></tr>
+                  <tr><td>4</td><td>1.85h</td><td>1.35h</td><td>0.91h</td></tr>
+                  <tr><td>5</td><td>2.00h</td><td>1.47h</td><td>0.99h</td></tr>
+                  <tr><td>6+</td><td>2.16h</td><td>1.58h</td><td>1.06h</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h3 style="margin-top:20px">Standard PTO per pay period, hourly — biweekly</h3>
+            <div class="policy-table">
+              <table>
+                <thead><tr><th>Years of service</th><th>Class F</th><th>Class R</th><th>Class H</th></tr></thead>
+                <tbody>
+                  <tr><td>0</td><td>1.24h</td><td>0.85h</td><td>0.58h</td></tr>
+                  <tr><td>1</td><td>2.77h</td><td>2h</td><td>1.35h</td></tr>
+                  <tr><td>2</td><td>3.08h</td><td>2.24h</td><td>1.50h</td></tr>
+                  <tr><td>3</td><td>3.39h</td><td>2.47h</td><td>1.66h</td></tr>
+                  <tr><td>4</td><td>3.70h</td><td>2.70h</td><td>1.81h</td></tr>
+                  <tr><td>5</td><td>4h</td><td>2.93h</td><td>1.97h</td></tr>
+                  <tr><td>6+</td><td>4.31h</td><td>3.16h</td><td>2.12h</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted">The policy does not list hourly monthly rates. For hourly monthly pay, this app derives the rate as annual accrual ÷ 12.</p>
+            <h3 style="margin-top:20px">Standard PTO, salaried employees</h3>
+            <div class="policy-table">
+              <table>
+                <thead><tr><th>YOS</th><th>Class F</th><th>Class R</th><th>Class H</th></tr></thead>
+                <tbody>
+                  <tr><td>0</td><td>72h</td><td>52h</td><td>35h</td></tr>
+                  <tr><td>1–5</td><td>112h</td><td>82h</td><td>55h</td></tr>
+                  <tr><td>6+</td><td>152h</td><td>112h</td><td>75h</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h3 style="margin-top:20px">Standard PTO per pay period, salaried</h3>
+            <div class="policy-table">
+              <table>
+                <thead><tr><th>YOS</th><th>Class F</th><th>Class R</th><th>Class H</th></tr></thead>
+                <tbody>
+                  <tr><td>0 — biweekly</td><td>2.77h</td><td>2h</td><td>1.35h</td></tr>
+                  <tr><td>1–5 — biweekly</td><td>4.31h</td><td>3.16h</td><td>2.12h</td></tr>
+                  <tr><td>6+ — biweekly</td><td>5.85h</td><td>4.31h</td><td>2.89h</td></tr>
+                  <tr><td>0 — monthly</td><td>6h</td><td>4.34h</td><td>2.92h</td></tr>
+                  <tr><td>1–5 — monthly</td><td>9.34h</td><td>6.84h</td><td>4.59h</td></tr>
+                  <tr><td>6+ — monthly</td><td>12.67h</td><td>9.34h</td><td>6.25h</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h3 style="margin-top:20px">PTO caps</h3>
+            <p>Standard PTO rollover cap: 160h. Standard PTO balance cap: 160h. Standard usage cap: no cap.</p>
+            <p>Flexible PTO rollover cap: 108h. Flexible balance, annual accrual, and usage caps: no cap.</p>
+            <h3 style="margin-top:20px">Flexible PTO</h3>
+            <p>Initial annual grant: Class F 10h, Class R 7.5h, Class H 5h. The grant occurs on the hire date and on January 1 in subsequent years.</p>
+            <div class="policy-table">
+              <table>
+                <thead><tr><th>Pay frequency</th><th>Class F</th><th>Class R</th><th>Class H</th></tr></thead>
+                <tbody>
+                  <tr><td>Weekly</td><td>1.35h</td><td>1.32h</td><td>1h</td></tr>
+                  <tr><td>Biweekly</td><td>2.7h</td><td>2.64h</td><td>2h</td></tr>
+                  <tr><td>Monthly</td><td>5.84h</td><td>5.71h</td><td>4.25h</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted">Washington note: Flexible PTO accrual is based on regularly scheduled workweek hours. Amazon may review actual hours worked at year-end and grant additional Flexible PTO if applicable; this discretionary adjustment is not automatically estimated by the app.</p>
+          </details>
+        </section>
+
+        <section id="backup-section">
+          <h2>Backup</h2>
+          <p class="muted">Export your local data before changing devices or clearing browser data.</p>
+          <div class="actions">
+            <button id="export-button" class="secondary" type="button">Export JSON</button>
+            <label class="secondary" style="display:inline-block; border:1px solid #b8c0c8; border-radius:6px; padding:8px 12px; cursor:pointer; font-weight:400">
+              Import JSON
+              <input id="import-file" type="file" accept="application/json,.json" hidden>
+            </label>
+            <button id="reset-button" class="danger" type="button">Reset local data</button>
+            <span id="backup-status" class="status" aria-live="polite"></span>
+          </div>
+        </section>
+
+        <footer>
+          This app is local-only. It does not send your PTO data to a server.
+        </footer>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
