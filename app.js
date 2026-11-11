@@ -365,13 +365,23 @@
     return balanceAt(targetDate) || { std: state.stdMin, flex: state.flexMin, combined: state.stdMin + state.flexMin };
   }
 
-  function anniversaryWeek() {
+  function nextAnniversaryMarker() {
     const today = todayDate();
     const hireDate = safeDate(state.hireDate);
     if (!state.configured || !hireDate) return null;
-    const anniversary = addYears(hireDate, yearsOfService(hireDate, today) + 1);
-    const days = Math.ceil((anniversary - today) / MS_PER_DAY);
-    return days > 0 ? Math.ceil(days / 7) : null;
+    const anniversaryYears = yearsOfService(hireDate, today) + 1;
+    const anniversary = addYears(hireDate, anniversaryYears);
+    const weeks = (anniversary - today) / (7 * MS_PER_DAY);
+    return weeks > 0 ? { weeks, years: anniversaryYears } : null;
+  }
+
+  function nextNewYearMarker() {
+    const today = todayDate();
+    const newYear = new Date(today.getFullYear() + 1, 0, 1);
+    return {
+      date: newYear,
+      weeks: (newYear - today) / (7 * MS_PER_DAY)
+    };
   }
 
   function fillSettingsForm() {
@@ -545,14 +555,19 @@
       .map(week => `<text x="${x(week)}" y="${height - 19}" text-anchor="middle" fill="#66727d" font-size="11">${week}</text>`)
       .join("");
     const capY = y(FLEX_CAP_MIN);
-    const anniv = anniversaryWeek();
-    const annivLine = anniv && anniv <= 52
-      ? `<line x1="${x(anniv)}" y1="${top}" x2="${x(anniv)}" y2="${top + graphHeight}" stroke="#6b7280" stroke-dasharray="4 4"/><text x="${x(anniv) + 5}" y="${top + 12}" fill="#66727d" font-size="11">1-year</text>`
+    const anniv = nextAnniversaryMarker();
+    const annivLine = anniv && anniv.weeks <= 52
+      ? `<line x1="${x(anniv.weeks)}" y1="${top}" x2="${x(anniv.weeks)}" y2="${top + graphHeight}" stroke="#6b7280" stroke-dasharray="4 4"/><text x="${x(anniv.weeks) + 5}" y="${top + 12}" fill="#66727d" font-size="11">${anniv.years}-year mark</text>`
+      : "";
+    const newYear = nextNewYearMarker();
+    const newYearLine = state.configured && newYear.weeks <= 52
+      ? `<line x1="${x(newYear.weeks)}" y1="${top}" x2="${x(newYear.weeks)}" y2="${top + graphHeight}" stroke="#059669" stroke-dasharray="4 4"/><text x="${x(newYear.weeks) + 5}" y="${top + 28}" fill="#047857" font-size="11">New Year grant</text>`
       : "";
     svg.innerHTML = `
       ${grid}
       <line x1="${left}" y1="${capY}" x2="${width - right}" y2="${capY}" stroke="#a16207" stroke-dasharray="6 4"/>
       ${annivLine}
+      ${newYearLine}
       <path d="${linePath("std")}" fill="none" stroke="#2563eb" stroke-width="2.5"/>
       <path d="${linePath("flex")}" fill="none" stroke="#059669" stroke-width="2.5"/>
       <path d="${linePath("combined")}" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
@@ -567,6 +582,56 @@
       <rect id="chart-hover-target" x="0" y="0" width="${width}" height="${height}" fill="transparent" pointer-events="all"/>
     `;
     bindChartHover(points, { width, left, top, graphWidth, graphHeight });
+  }
+
+  function nthWeekdayOfMonth(year, month, weekday, occurrence) {
+    const first = new Date(year, month, 1);
+    const offset = (weekday - first.getDay() + 7) % 7;
+    return new Date(year, month, 1 + offset + ((occurrence - 1) * 7));
+  }
+
+  function lastWeekdayOfMonth(year, month, weekday) {
+    const last = new Date(year, month + 1, 0);
+    const offset = (last.getDay() - weekday + 7) % 7;
+    return new Date(year, month + 1, last.getDate() - offset);
+  }
+
+  function observedHoliday(year, month, day) {
+    const holiday = new Date(year, month, day);
+    if (holiday.getDay() === 6) return addDays(holiday, -1);
+    if (holiday.getDay() === 0) return addDays(holiday, 1);
+    return holiday;
+  }
+
+  function holidaysForYear(year) {
+    return [
+      { name: "US New Year's Day Observed", date: observedHoliday(year, 0, 1) },
+      { name: "US Martin Luther King Jr. Day", date: nthWeekdayOfMonth(year, 0, 1, 3) },
+      { name: "US Memorial Day", date: lastWeekdayOfMonth(year, 4, 1) },
+      { name: "US Independence Day Observed", date: observedHoliday(year, 6, 4) },
+      { name: "US Labor Day", date: nthWeekdayOfMonth(year, 8, 1, 1) },
+      { name: "US Thanksgiving Day", date: nthWeekdayOfMonth(year, 10, 4, 4) },
+      { name: "US Christmas Day Observed", date: observedHoliday(year, 11, 25) }
+    ].sort((first, second) => first.date - second.date);
+  }
+
+  function formatHolidayDate(date) {
+    return date.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  }
+
+  function renderHolidays() {
+    const today = todayDate();
+    const year = today.getFullYear();
+    $("holidays-year").textContent = year;
+    $("holiday-list").innerHTML = holidaysForYear(year).map(holiday => {
+      const isPast = holiday.date < today;
+      return `<div class="holiday-row${isPast ? " past" : ""}"><span>${holiday.name}</span><strong>${formatHolidayDate(holiday.date)}</strong></div>`;
+    }).join("");
   }
 
   function bindChartHover(points, chart) {
@@ -666,6 +731,7 @@
     renderBalances();
     renderSelectedDate();
     renderChart();
+    renderHolidays();
     renderVacations();
   }
 
@@ -873,6 +939,7 @@
     renderBalances();
     renderSelectedDate();
     renderChart();
+    renderHolidays();
   }
 
   window.addEventListener("focus", refreshIfDateChanged);

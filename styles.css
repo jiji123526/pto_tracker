@@ -426,9 +426,46 @@ button.danger {
 }
 
 #projection-section .section-heading,
+#holidays-section .section-heading,
 #policy-section > details,
 #backup-section > h2 {
   border-bottom: 1px solid var(--soft-border);
+}
+
+.section-title-with-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.holiday-list {
+  padding: 4px 12px 12px;
+}
+
+.holiday-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 8px;
+  color: var(--text);
+  border-bottom: 1px solid var(--soft-border);
+}
+
+.holiday-row:last-child {
+  border-bottom: 0;
+}
+
+.holiday-row strong {
+  white-space: nowrap;
+}
+
+.holiday-row.past {
+  color: #a6afbb;
+}
+
+.holiday-row.past strong {
+  color: #a6afbb;
 }
 
 .chart-wrap {
@@ -510,7 +547,9 @@ button.danger {
 .legend .flex { color: #059669; }
 .legend .combined { color: #7c3aed; }
 .legend .cap { color: #a16207; }
+.legend .new-year { color: #059669; }
 .legend .cap::before { height: 0; background: transparent; border-top: 2px dashed currentColor; }
+.legend .new-year::before { height: 0; background: transparent; border-top: 2px dashed currentColor; }
 
 #vacation-form { padding: 16px 12px 0; }
 .vacation-list { padding: 0 12px 12px; }
