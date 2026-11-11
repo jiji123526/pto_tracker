@@ -118,26 +118,33 @@
               <button id="balance-definitions-button" class="info-button field-info-button" type="button" aria-label="Explain time off balances" title="Balance definitions">i</button>
             </h2>
           </div>
-          <p class="muted">Current balances as of <span id="today-label"></span>, with planned time off deducted from available balances.</p>
-          <div class="balance-overview">
-            <div class="balance-total-label">Total Available Balance</div>
-            <div id="total-balance" class="balance-total">—</div>
+          <p id="balance-view-copy" class="muted">Current balances as of <span id="today-label"></span>, with planned time off deducted from available balances.</p>
+          <div id="balance-date-control" class="balance-date-control">
+            <label>
+              See balance on
+              <input id="viewDate" type="date">
+            </label>
+            <div id="view-date-note" class="muted"></div>
+          </div>
+          <div id="balance-overview" class="balance-overview">
+            <div id="total-balance-label" class="balance-total-label">Total Available Balance</div>
+            <div id="total-balance" class="balance-total">0 h</div>
             <div class="balance-bar" aria-label="Total available balance split between Flexible and Standard PTO">
               <div id="flex-segment"></div>
               <div id="std-segment"></div>
             </div>
             <div class="balance-bar-labels">
-              <span>Flexible PTO <strong id="flex-total-label">—</strong></span>
-              <span>Standard PTO <strong id="std-total-label">—</strong></span>
+              <span>Flexible PTO <strong id="flex-total-label">0 h</strong></span>
+              <span>Standard PTO <strong id="std-total-label">0 h</strong></span>
             </div>
           </div>
-          <div class="cards summary-cards">
+          <div id="balance-cards" class="cards summary-cards">
             <div class="card summary-card standard-card">
               <div class="card-kicker"><span>Standard PTO</span><span class="card-icon">▣</span></div>
               <div class="balance-details">
-                <div class="balance-detail"><span>Current balance</span><strong id="std-current-balance">—</strong></div>
-                <div class="balance-detail"><span>Planned time off</span><span class="balance-detail-value"><strong id="std-planned-balance">—</strong><button class="detail-action" type="button" data-open-requests aria-label="View planned Standard PTO requests">›</button></span></div>
-                <div class="balance-detail available-detail"><span>Available balance</span><strong id="std-balance">—</strong></div>
+                <div id="std-primary-detail" class="balance-detail"><span id="std-primary-label">Current balance</span><strong id="std-current-balance">0 h</strong></div>
+                <div id="std-planned-detail" class="balance-detail"><span>Planned time off</span><span class="balance-detail-value"><strong id="std-planned-balance">0 h</strong><button class="detail-action" type="button" data-open-requests="std" aria-label="Log Standard PTO">›</button></span></div>
+                <div id="std-available-detail" class="balance-detail available-detail"><span id="std-result-label">Available balance</span><strong id="std-balance">0 h</strong></div>
               </div>
               <div class="progress" aria-label="Standard PTO toward 160 hour balance cap">
                 <div id="std-progress"></div>
@@ -148,9 +155,9 @@
             <div class="card summary-card flex-card">
               <div class="card-kicker"><span>Flexible PTO</span><span class="card-icon">◒</span></div>
               <div class="balance-details">
-                <div class="balance-detail"><span>Current balance</span><strong id="flex-current-balance">—</strong></div>
-                <div class="balance-detail"><span>Planned time off</span><span class="balance-detail-value"><strong id="flex-planned-balance">—</strong><button class="detail-action" type="button" data-open-requests aria-label="View planned Flexible PTO requests">›</button></span></div>
-                <div class="balance-detail available-detail"><span>Available balance</span><strong id="flex-balance">—</strong></div>
+                <div id="flex-primary-detail" class="balance-detail"><span id="flex-primary-label">Current balance</span><strong id="flex-current-balance">0 h</strong></div>
+                <div id="flex-planned-detail" class="balance-detail"><span>Planned time off</span><span class="balance-detail-value"><strong id="flex-planned-balance">0 h</strong><button class="detail-action" type="button" data-open-requests="flex" aria-label="Log Flexible PTO">›</button></span></div>
+                <div id="flex-available-detail" class="balance-detail available-detail"><span id="flex-result-label">Available balance</span><strong id="flex-balance">0 h</strong></div>
               </div>
               <div class="progress" aria-label="Flexible PTO toward rollover cap">
                 <div id="flex-progress"></div>
@@ -159,7 +166,7 @@
             </div>
             <div class="card summary-card combined-card">
               <div class="card-kicker"><span>Combined balance</span><span class="card-icon">＋</span></div>
-              <div id="combined-balance" class="balance">—</div>
+              <div id="combined-balance" class="balance">0 h</div>
               <small class="muted">Standard + Flexible</small>
             </div>
           </div>
@@ -178,53 +185,10 @@
               <p><strong>Current balance:</strong> Your balance as of today.</p>
               <p><strong>Planned time off:</strong> The total PTO scheduled for today and future leave requests.</p>
               <p><strong>Available balance:</strong> Your current balance minus planned time off.</p>
-              <p class="muted">Future accruals are reflected in the projection and date-based balance view.</p>
+              <p><strong>Balance by date:</strong> Your estimated balance on a selected future date, including scheduled accruals and planned leave usage.</p>
             </div>
           </div>
         </dialog>
-
-        <section id="date-section">
-          <h2>Balance by date</h2>
-          <p class="muted" id="view-date-copy">Choose a date to see your estimated balance. Planned leave usage is included.</p>
-          <div class="balance-date-control">
-            <label>
-              See balance on
-              <input id="viewDate" type="date">
-            </label>
-            <div id="view-date-note" class="muted"></div>
-          </div>
-          <div id="view-balance-overview" class="balance-overview">
-            <div class="balance-total-label">Total Available Balance</div>
-            <div id="view-total-balance" class="balance-total">—</div>
-            <div class="balance-bar" aria-label="Total balance split between Flexible and Standard PTO on selected date">
-              <div id="view-flex-segment"></div>
-              <div id="view-std-segment"></div>
-            </div>
-            <div class="balance-bar-labels">
-              <span>Flexible PTO <strong id="view-flex-total-label">—</strong></span>
-              <span>Standard PTO <strong id="view-std-total-label">—</strong></span>
-            </div>
-          </div>
-          <div id="view-balance-cards" class="cards summary-cards">
-            <div class="card summary-card standard-card">
-              <div class="card-kicker"><span>Standard PTO</span></div>
-              <div id="view-std-balance" class="balance">—</div>
-              <div class="progress" aria-label="Standard PTO toward 160 hour balance cap on selected date">
-                <div id="view-std-progress"></div>
-              </div>
-              <small id="view-std-cap-label" class="muted"></small>
-            </div>
-            <div class="card summary-card flex-card">
-              <div class="card-kicker"><span>Flexible PTO</span></div>
-              <div id="view-flex-balance" class="balance">—</div>
-              <div class="progress" aria-label="Flexible PTO toward rollover cap on selected date">
-                <div id="view-flex-progress"></div>
-              </div>
-              <small id="view-flex-cap-label" class="muted"></small>
-            </div>
-          </div>
-          <div id="view-warning"></div>
-        </section>
 
         <section id="projection-section">
           <div class="section-heading">
@@ -261,7 +225,7 @@
             <div class="modal-heading">
               <div>
                 <h2 id="vacation-modal-title">Leave log</h2>
-                <p class="muted">Plan one-day or multi-day leave and see the projected balances after it.</p>
+                <p id="vacation-modal-description" class="muted">Plan one-day or multi-day leave and see the projected balances after it.</p>
               </div>
               <button id="vacation-close" class="secondary modal-close" type="button" aria-label="Close leave log">Close</button>
             </div>
@@ -314,7 +278,12 @@
             </form>
             <div class="vacation-list">
               <div id="vacation-summary" class="muted"></div>
-              <div class="table-scroll">
+              <div id="vacation-empty" class="vacation-empty" hidden>
+                <div class="vacation-empty-icon" aria-hidden="true">✓</div>
+                <strong>No leave logs yet</strong>
+                <p>Add planned leave from the main page to see it here.</p>
+              </div>
+              <div id="vacation-table-wrap" class="table-scroll">
                 <table>
                   <thead>
                     <tr><th>Dates</th><th>Type</th><th>Leave</th><th>Balance after leave</th><th>Note</th><th></th></tr>
@@ -339,7 +308,7 @@
               <h3>1. Set your status</h3>
               <p>Enter your employment type, class, pay frequency, hire date, and starting PTO balances, then select <strong>Save status</strong>.</p>
               <h3>2. Check your balance</h3>
-              <p>Your current balance includes completed pay periods and logged leave. Use <strong>Balance by date</strong> to estimate a future balance.</p>
+              <p>Your current balance includes completed pay periods and logged leave. Use the date picker in the balance section to estimate a future balance.</p>
               <h3>3. Log planned leave</h3>
               <p>Select <strong>Add leave</strong> to record Flexible or Standard PTO. Multi-day leave can use a date range and weekdays-only scheduling.</p>
               <h3>4. Review the projection</h3>

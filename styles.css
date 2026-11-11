@@ -297,13 +297,11 @@ button.danger {
   height: 100%;
 }
 
-#flex-segment,
-#view-flex-segment {
+#flex-segment {
   background: var(--green);
 }
 
-#std-segment,
-#view-std-segment {
+#std-segment {
   background: var(--green);
   border-left: 1px solid #fff;
 }
@@ -360,7 +358,13 @@ button.danger {
 .balance-detail-value {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 7px;
+}
+
+.balance-detail-value strong {
+  min-width: 58px;
+  text-align: right;
 }
 
 .available-detail {
@@ -374,13 +378,20 @@ button.danger {
 }
 
 .detail-action {
-  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  flex: 0 0 20px;
+  padding: 0;
   color: var(--orange);
   background: transparent;
   border: 0;
   border-radius: 0;
   font-size: 23px;
-  line-height: 16px;
+  line-height: 1;
+  transform: translateY(-1px);
 }
 
 .detail-action:hover {
@@ -537,14 +548,11 @@ button.danger {
   border-color: var(--soft-border);
 }
 
-#date-section > p {
-  padding: 0 12px;
-}
-
 .balance-date-control {
   display: flex;
   align-items: end;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 12px 18px;
   padding: 0 12px 12px;
 }
 
@@ -934,13 +942,57 @@ dialog::backdrop {
   padding: 0 28px 26px;
 }
 
+.vacation-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 42px 24px 46px;
+  margin-top: 18px;
+  color: var(--muted);
+  text-align: center;
+  background: #f8fafc;
+  border: 1px solid var(--soft-border);
+  border-radius: 8px;
+}
+
+.vacation-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 5px;
+  color: #64748b;
+  background: #e8edf3;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.vacation-empty strong {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.vacation-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.logs-only .vacation-list {
+  padding-top: 8px;
+}
+
+.logs-only .vacation-list table {
+  min-width: 820px;
+}
+
 .vacation-list table {
   min-width: 760px;
 }
 
 .vacation-list th,
 .vacation-list td {
-  padding: 12px 10px;
+  padding: 15px 10px;
 }
 
 .vacation-list th:first-child,
@@ -1018,7 +1070,7 @@ footer {
   }
 
   .summary-card + .summary-card,
-  #date-section .card + .card {
+  #current-section .card + .card {
     margin-left: 0;
   }
 

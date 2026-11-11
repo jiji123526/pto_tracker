@@ -4,6 +4,7 @@
   const STORAGE_KEY = "pto-tracker-state-v1";
   const FLEX_CAP_MIN = 108 * 60;
   const STANDARD_CAP_MIN = 160 * 60;
+  const BALANCE_PLACEHOLDER = "0 h";
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
   const DEFAULT_STATE = {
     configured: false,
@@ -264,7 +265,7 @@
     return [...dates.values()];
   }
 
-  function balanceAt(targetDate) {
+  function balanceAt(targetDate, includeLeave = true) {
     const asOf = todayDate();
     if (!state.configured || !targetDate || targetDate < asOf) return null;
 
@@ -303,6 +304,7 @@
     });
 
     state.vacations.forEach(leave => {
+      if (!includeLeave) return;
       leaveUsageDates(leave).forEach(({ date, hours }) => {
         if (date <= asOf || date > targetDate) return;
         const event = eventFor(date);
@@ -453,126 +455,153 @@
     });
   }
 
-  function renderBalances() {
-    const current = liveBalance();
-    const configured = state.configured;
-    const currentStd = current ? current.std : state.stdMin;
-    const currentFlex = current ? current.flex : state.flexMin;
-    const planned = plannedLeaveTotals();
-    const availableStd = currentStd - planned.std;
-    const availableFlex = currentFlex - planned.flex;
-    const availableTotal = availableStd + availableFlex;
-    const standardPercent = Math.min(100, Math.max(0, (availableStd / STANDARD_CAP_MIN) * 100));
-    const percent = Math.min(100, Math.max(0, (availableFlex / FLEX_CAP_MIN) * 100));
-    $("today-label").textContent = formatDate(dateString(todayDate()));
-    $("std-current-balance").textContent = configured ? formatMinutes(currentStd) : "—";
-    $("std-planned-balance").textContent = configured ? formatMinutes(planned.std) : "—";
-    $("std-balance").textContent = configured ? formatMinutes(availableStd) : "—";
-    $("flex-current-balance").textContent = configured ? formatMinutes(currentFlex) : "—";
-    $("flex-planned-balance").textContent = configured ? formatMinutes(planned.flex) : "—";
-    $("flex-balance").textContent = configured ? formatMinutes(availableFlex) : "—";
-    $("combined-balance").textContent = configured ? formatMinutes(availableTotal) : "—";
-    $("total-balance").textContent = configured ? formatMinutes(availableTotal) : "—";
-    $("flex-total-label").textContent = configured ? formatMinutes(availableFlex) : "—";
-    $("std-total-label").textContent = configured ? formatMinutes(availableStd) : "—";
-    $("std-progress").style.width = `${standardPercent}%`;
-    $("std-progress").classList.toggle("amber", standardPercent > 90);
-    $("std-cap-label").textContent = configured ? `${Math.round(standardPercent)}% of 160h balance cap` : "";
-    const total = Math.max(0, availableStd) + Math.max(0, availableFlex);
-    const flexShare = total ? Math.max(0, availableFlex) / total * 100 : 0;
-    $("flex-segment").style.width = `${flexShare}%`;
-    $("std-segment").style.width = `${Math.max(0, 100 - flexShare)}%`;
-    $("flex-progress").style.width = `${percent}%`;
-    $("flex-progress").classList.toggle("amber", percent > 90);
-    $("flex-cap-label").textContent = configured ? `${Math.round(percent)}% of 108h rollover cap` : "";
-    const rate = configured ? standardRateHours(state, todayDate()) : 0;
-    const derivedRate = (state.employmentType === "hourly" && state.payFrequency === "monthly")
-      || (state.employmentType === "salaried" && state.payFrequency === "weekly");
-    $("std-rate").textContent = configured
-      ? `Current Standard rate: ${formatHours(rate)} per ${state.payFrequency} pay period${derivedRate ? " (derived)" : ""}`
-      : "";
-    const warnings = [];
-    if (!configured) warnings.push("Complete your status above to calculate your live balance.");
-    if (availableStd < 0 || availableFlex < 0) warnings.push("Not enough PTO after planned time off.");
-    if (currentStd >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
-    if (currentFlex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
-    $("policy-warning").innerHTML = warnings.length
-      ? warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("")
-      : `<div class="notice info">Live balance is calculated from today's saved balances.</div>`;
+  function plannedLeaveTotalsThrough(targetDate) {
+    const today = todayDate();
+    return state.vacations.reduce((totals, leave) => {
+      leaveUsageDates(leave).forEach(({ date, hours }) => {
+        if (date < today || date > targetDate) return;
+        totals[leave.type] += hours * 60;
+      });
+      return totals;
+    }, { std: 0, flex: 0 });
   }
 
-  function renderSelectedDate() {
-    $("viewDate").min = dateString(todayDate());
-    $("viewDate").max = "";
-    $("viewDate").value = state.viewDateSelected ? state.viewDate : "";
-    if (!state.viewDateSelected || !safeDate(state.viewDate)) {
-      $("view-date-copy").textContent = "Choose a date to see your estimated balance. Planned leave usage is included.";
-      $("view-balance-overview").style.display = "none";
-      $("view-balance-cards").style.display = "none";
-      $("view-total-balance").textContent = "—";
-      $("view-flex-segment").style.width = "0%";
-      $("view-std-segment").style.width = "0%";
-      $("view-flex-total-label").textContent = "—";
-      $("view-std-total-label").textContent = "—";
-      $("view-std-balance").textContent = "—";
-      $("view-flex-balance").textContent = "—";
-      $("view-std-progress").style.width = "0%";
-      $("view-std-progress").classList.remove("amber");
-      $("view-std-cap-label").textContent = "";
-      $("view-flex-progress").style.width = "0%";
-      $("view-flex-progress").classList.remove("amber");
-      $("view-flex-cap-label").textContent = "";
+  function renderBalanceView() {
+    const configured = state.configured;
+    const today = todayDate();
+    const todayLabel = formatDate(dateString(today));
+    const overview = $("balance-overview");
+    const cards = $("balance-cards");
+    const warnings = [];
+    const savedViewDate = state.viewDateSelected ? safeDate(state.viewDate) : null;
+    const selectedDate = savedViewDate && savedViewDate >= today ? savedViewDate : today;
+    const currentMode = selectedDate.getTime() === today.getTime();
+
+    $("viewDate").min = dateString(today);
+    $("viewDate").value = dateString(selectedDate);
+
+    const setDetailMode = (isDateMode) => {
+      $("std-primary-detail").hidden = false;
+      $("flex-primary-detail").hidden = false;
+      $("std-planned-detail").hidden = false;
+      $("flex-planned-detail").hidden = false;
+      $("std-available-detail").hidden = false;
+      $("flex-available-detail").hidden = false;
+    };
+
+    if (currentMode) {
+      const current = liveBalance();
+      const currentStd = current ? current.std : state.stdMin;
+      const currentFlex = current ? current.flex : state.flexMin;
+      const planned = plannedLeaveTotals();
+      const availableStd = currentStd - planned.std;
+      const availableFlex = currentFlex - planned.flex;
+      const availableTotal = availableStd + availableFlex;
+      const standardPercent = Math.min(100, Math.max(0, (availableStd / STANDARD_CAP_MIN) * 100));
+      const percent = Math.min(100, Math.max(0, (availableFlex / FLEX_CAP_MIN) * 100));
+
+      setDetailMode(false);
+      overview.hidden = false;
+      cards.hidden = false;
+      $("balance-view-copy").innerHTML = `Current balances as of <span id="today-label">${todayLabel}</span>, with planned time off deducted from available balances.`;
+      $("total-balance-label").textContent = "Total Available Balance";
+      $("std-primary-label").textContent = "Current balance";
+      $("flex-primary-label").textContent = "Current balance";
+      $("std-result-label").textContent = "Available balance";
+      $("flex-result-label").textContent = "Available balance";
+      $("std-current-balance").textContent = configured ? formatMinutes(currentStd) : BALANCE_PLACEHOLDER;
+      $("std-planned-balance").textContent = configured ? formatMinutes(planned.std) : BALANCE_PLACEHOLDER;
+      $("std-balance").textContent = configured ? formatMinutes(availableStd) : BALANCE_PLACEHOLDER;
+      $("flex-current-balance").textContent = configured ? formatMinutes(currentFlex) : BALANCE_PLACEHOLDER;
+      $("flex-planned-balance").textContent = configured ? formatMinutes(planned.flex) : BALANCE_PLACEHOLDER;
+      $("flex-balance").textContent = configured ? formatMinutes(availableFlex) : BALANCE_PLACEHOLDER;
+      $("combined-balance").textContent = configured ? formatMinutes(availableTotal) : BALANCE_PLACEHOLDER;
+      $("total-balance").textContent = configured ? formatMinutes(availableTotal) : BALANCE_PLACEHOLDER;
+      $("flex-total-label").textContent = configured ? formatMinutes(availableFlex) : BALANCE_PLACEHOLDER;
+      $("std-total-label").textContent = configured ? formatMinutes(availableStd) : BALANCE_PLACEHOLDER;
+      $("std-progress").style.width = `${standardPercent}%`;
+      $("std-progress").classList.toggle("amber", standardPercent > 90);
+      $("std-cap-label").textContent = configured ? `${Math.round(standardPercent)}% of 160h balance cap` : "";
+      const total = Math.max(0, availableStd) + Math.max(0, availableFlex);
+      const flexShare = total ? Math.max(0, availableFlex) / total * 100 : 0;
+      $("flex-segment").style.width = `${flexShare}%`;
+      $("std-segment").style.width = `${Math.max(0, 100 - flexShare)}%`;
+      $("flex-progress").style.width = `${percent}%`;
+      $("flex-progress").classList.toggle("amber", percent > 90);
+      $("flex-cap-label").textContent = configured ? `${Math.round(percent)}% of 108h rollover cap` : "";
+      const rate = configured ? standardRateHours(state, today) : 0;
+      const derivedRate = (state.employmentType === "hourly" && state.payFrequency === "monthly")
+        || (state.employmentType === "salaried" && state.payFrequency === "weekly");
+      $("std-rate").textContent = configured
+        ? `Current Standard rate: ${formatHours(rate)} per ${state.payFrequency} pay period${derivedRate ? " (derived)" : ""}`
+        : "";
+      if (!configured) warnings.push("Complete your status above to calculate your live balance.");
+      if (availableStd < 0 || availableFlex < 0) warnings.push("Not enough PTO after planned time off.");
+      if (currentStd >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
+      if (currentFlex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
       $("view-date-note").textContent = "";
-      $("view-warning").innerHTML = "";
+      $("policy-warning").innerHTML = warnings.length
+        ? warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("")
+        : `<div class="notice info">Live balance is calculated from today's saved balances.</div>`;
       return;
     }
 
-    const target = safeDate(state.viewDate);
-    $("view-date-copy").textContent = `Estimated balance for ${formatDate(state.viewDate)}. Planned leave usage is included.`;
-    $("view-balance-overview").style.display = "";
-    $("view-balance-cards").style.display = "";
-    const result = balanceAt(target);
-    if (!result) {
-      $("view-total-balance").textContent = "—";
-      $("view-flex-segment").style.width = "0%";
-      $("view-std-segment").style.width = "0%";
-      $("view-flex-total-label").textContent = "—";
-      $("view-std-total-label").textContent = "—";
-      $("view-std-balance").textContent = "—";
-      $("view-flex-balance").textContent = "—";
-      $("view-std-progress").style.width = "0%";
-      $("view-std-progress").classList.remove("amber");
-      $("view-std-cap-label").textContent = "";
-      $("view-flex-progress").style.width = "0%";
-      $("view-flex-progress").classList.remove("amber");
-      $("view-flex-cap-label").textContent = "";
-      $("view-date-note").textContent = `Choose ${formatDate(dateString(todayDate()))} or later.`;
-      $("view-warning").innerHTML = `<div class="notice error">The selected date is before today's starting balance.</div>`;
+    setDetailMode(true);
+    const target = selectedDate;
+    const projected = balanceAt(target, false);
+    const result = balanceAt(target, true);
+    if (!projected || !result) {
+      $("balance-view-copy").textContent = configured
+        ? `Estimated balance for ${formatDate(dateString(target))}.`
+        : "Complete your status above to calculate a future balance.";
+      overview.hidden = true;
+      cards.hidden = true;
+      $("view-date-note").textContent = configured ? `Choose ${todayLabel} or later.` : "";
+      $("policy-warning").innerHTML = configured
+        ? `<div class="notice error">The selected date is before today's starting balance.</div>`
+        : `<div class="notice error">Complete your status above to calculate your future balance.</div>`;
       return;
     }
-    $("view-total-balance").textContent = formatMinutes(result.combined);
-    $("view-flex-total-label").textContent = formatMinutes(result.flex);
-    $("view-std-total-label").textContent = formatMinutes(result.std);
-    const total = Math.max(0, result.std + result.flex);
-    const flexShare = total ? Math.max(0, result.flex / total) * 100 : 0;
-    $("view-flex-segment").style.width = `${flexShare}%`;
-    $("view-std-segment").style.width = `${Math.max(0, 100 - flexShare)}%`;
-    const standardPercent = Math.min(100, Math.max(0, (result.std / STANDARD_CAP_MIN) * 100));
-    $("view-std-progress").style.width = `${standardPercent}%`;
-    $("view-std-progress").classList.toggle("amber", standardPercent > 90);
-    $("view-std-cap-label").textContent = `${Math.round(standardPercent)}% of 160h balance cap`;
-    const percent = Math.min(100, Math.max(0, (result.flex / FLEX_CAP_MIN) * 100));
-    $("view-std-balance").textContent = formatMinutes(result.std);
-    $("view-flex-balance").textContent = formatMinutes(result.flex);
-    $("view-flex-progress").style.width = `${percent}%`;
-    $("view-flex-progress").classList.toggle("amber", percent > 90);
-    $("view-flex-cap-label").textContent = `${Math.round(percent)}% of 108h rollover cap`;
+
+    overview.hidden = false;
+    cards.hidden = false;
+    $("balance-view-copy").textContent = `Estimated balance for ${formatDate(dateString(target))}. Planned leave usage and future accruals are included.`;
+    $("total-balance-label").textContent = "Projected Total Balance";
+    const planned = plannedLeaveTotalsThrough(target);
+    $("std-current-balance").textContent = configured ? formatMinutes(projected.std) : BALANCE_PLACEHOLDER;
+    $("std-planned-balance").textContent = configured ? formatMinutes(planned.std) : BALANCE_PLACEHOLDER;
+    $("std-balance").textContent = configured ? formatMinutes(result.std) : BALANCE_PLACEHOLDER;
+    $("flex-current-balance").textContent = configured ? formatMinutes(projected.flex) : BALANCE_PLACEHOLDER;
+    $("flex-planned-balance").textContent = configured ? formatMinutes(planned.flex) : BALANCE_PLACEHOLDER;
+    $("flex-balance").textContent = configured ? formatMinutes(result.flex) : BALANCE_PLACEHOLDER;
+    $("total-balance").textContent = configured ? formatMinutes(projected.combined) : BALANCE_PLACEHOLDER;
+    $("flex-total-label").textContent = configured ? formatMinutes(projected.flex) : BALANCE_PLACEHOLDER;
+    $("std-total-label").textContent = configured ? formatMinutes(projected.std) : BALANCE_PLACEHOLDER;
+    $("std-primary-label").textContent = "Projected balance";
+    $("flex-primary-label").textContent = "Projected balance";
+    $("std-result-label").textContent = "Available balance";
+    $("flex-result-label").textContent = "Available balance";
+    const total = Math.max(0, projected.std + projected.flex);
+    const flexShare = total ? Math.max(0, projected.flex) / total * 100 : 0;
+    $("flex-segment").style.width = `${flexShare}%`;
+    $("std-segment").style.width = `${Math.max(0, 100 - flexShare)}%`;
+    const standardPercent = Math.min(100, Math.max(0, (projected.std / STANDARD_CAP_MIN) * 100));
+    const percent = Math.min(100, Math.max(0, (projected.flex / FLEX_CAP_MIN) * 100));
+    $("std-progress").style.width = `${standardPercent}%`;
+    $("std-progress").classList.toggle("amber", standardPercent > 90);
+    $("std-cap-label").textContent = `${Math.round(standardPercent)}% of 160h balance cap`;
+    $("flex-progress").style.width = `${percent}%`;
+    $("flex-progress").classList.toggle("amber", percent > 90);
+    $("flex-cap-label").textContent = `${Math.round(percent)}% of 108h rollover cap`;
+    const rate = configured ? standardRateHours(state, target) : 0;
+    $("std-rate").textContent = configured
+      ? `Projected Standard rate: ${formatHours(rate)} per ${state.payFrequency} pay period`
+      : "";
     $("view-date-note").textContent = `${result.periods} completed ${state.payFrequency} pay period${result.periods === 1 ? "" : "s"} since today.`;
-    const warnings = [];
     if (result.std < 0 || result.flex < 0) warnings.push("Not enough PTO for the logged usage.");
     if (result.std >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
     if (result.flex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
-    $("view-warning").innerHTML = warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("");
+    $("policy-warning").innerHTML = warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("");
   }
 
   function renderChart() {
@@ -792,12 +821,15 @@
 
   function renderVacations() {
     const sorted = [...state.vacations].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const hasLogs = sorted.length > 0;
     const stdTotal = sorted.filter(item => item.type === "std").reduce((sum, item) => sum + leaveTotalHours(item), 0);
     const flexTotal = sorted.filter(item => item.type === "flex").reduce((sum, item) => sum + leaveTotalHours(item), 0);
-    $("vacation-summary").textContent = sorted.length
+    $("vacation-summary").textContent = hasLogs
       ? `Logged total: ${formatHours(stdTotal)} Standard, ${formatHours(flexTotal)} Flexible`
-      : "No leave logged.";
-    $("vacations").innerHTML = sorted.length ? sorted.map(item => {
+      : "";
+    $("vacation-empty").hidden = hasLogs;
+    $("vacation-table-wrap").hidden = !hasLogs;
+    $("vacations").innerHTML = hasLogs ? sorted.map(item => {
       const after = balanceAt(safeDate(item.endDate));
       const balanceAfter = after
         ? `<span class="balance-line${after.std < 0 ? " balance-negative" : ""}">Std ${formatMinutes(after.std)}</span><span class="balance-line${after.flex < 0 ? " balance-negative" : ""}">Flex ${formatMinutes(after.flex)}</span>`
@@ -811,7 +843,7 @@
       const schedule = isMultiDay ? `<small class="leave-schedule">${scheduleLabel}</small>` : "";
       const perDay = isMultiDay ? `<small class="leave-schedule">${formatHours(item.hoursPerDay)}/day</small>` : "";
       return `<tr><td>${leaveDateLabel(item)}${schedule}</td><td>${item.type === "std" ? "Standard" : "Flexible"}</td><td>${dayLabel}${perDay}</td><td class="balance-cell">${balanceAfter}</td><td>${escapeHtml(item.note)}</td><td class="right"><button class="danger small-button" type="button" data-remove="${escapeHtml(item.id)}">Remove</button></td></tr>`;
-    }).join("") : `<tr><td colspan="6" class="empty">Add planned leave to include it in projections.</td></tr>`;
+    }).join("") : "";
   }
 
   function escapeHtml(value) {
@@ -823,8 +855,7 @@
   function render() {
     fillSettingsForm();
     renderRequests();
-    renderBalances();
-    renderSelectedDate();
+    renderBalanceView();
     renderChart();
     renderHolidays();
     renderVacations();
@@ -878,7 +909,17 @@
   const vacationModal = $("vacation-modal");
   const guideModal = $("guide-modal");
 
-  function openVacationModal(focusForm) {
+  function openVacationModal(focusForm, type = "", listOnly = false) {
+    $("vacation-form").hidden = listOnly;
+    vacationModal.classList.toggle("logs-only", listOnly);
+    $("vacation-modal-title").textContent = listOnly ? "Leave logs" : "Leave log";
+    $("vacation-modal-description").textContent = listOnly
+      ? "Review your logged and planned time off."
+      : "Plan one-day or multi-day leave and see the projected balances after it.";
+    if (type === "std" || type === "flex") {
+      $("vacationType").value = type;
+      renderVacationPreview();
+    }
     if (!vacationModal.open) vacationModal.showModal();
     if (focusForm) {
       setTimeout(() => $("vacationStartDate").focus(), 0);
@@ -890,9 +931,9 @@
   vacationModal.addEventListener("click", event => {
     if (event.target === vacationModal) vacationModal.close();
   });
-  $("view-all-requests").addEventListener("click", () => openVacationModal(false));
+  $("view-all-requests").addEventListener("click", () => openVacationModal(false, "", true));
   document.querySelectorAll("[data-open-requests]").forEach(button => {
-    button.addEventListener("click", () => openVacationModal(false));
+    button.addEventListener("click", () => openVacationModal(true, button.dataset.openRequests));
   });
   $("guide-button").addEventListener("click", () => guideModal.showModal());
   $("guide-close").addEventListener("click", () => guideModal.close());
@@ -1035,7 +1076,7 @@
     state.viewDate = event.target.value;
     state.viewDateSelected = Boolean(event.target.value);
     saveState();
-    renderSelectedDate();
+    renderBalanceView();
   });
 
   function refreshIfDateChanged() {
@@ -1043,8 +1084,7 @@
     if (currentDate === lastLiveDate) return;
     lastLiveDate = currentDate;
     renderRequests();
-    renderBalances();
-    renderSelectedDate();
+    renderBalanceView();
     renderChart();
     renderHolidays();
   }
