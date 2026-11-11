@@ -565,7 +565,7 @@
 
     overview.hidden = false;
     cards.hidden = false;
-    $("balance-view-copy").textContent = `Estimated balance for ${formatDate(dateString(target))}. Planned leave usage and future accruals are included.`;
+    $("balance-view-copy").textContent = `Estimated balance for ${formatDate(dateString(target))}. Planned time-off usage and future accruals are included.`;
     $("total-balance-label").textContent = "Projected Total Balance";
     const planned = plannedLeaveTotalsThrough(target);
     $("std-current-balance").textContent = configured ? formatMinutes(projected.std) : BALANCE_PLACEHOLDER;
@@ -651,7 +651,7 @@
       const typeLabel = leave.type === "std" ? "Standard" : "Flexible";
       return `
         <rect x="${startX}" y="${top}" width="${width}" height="${graphHeight}" fill="#c2410c" opacity=".10">
-          <title>Planned ${typeLabel} leave: ${formatDate(leave.startDate)}${leave.startDate === leave.endDate ? "" : ` – ${formatDate(leave.endDate)}`}</title>
+          <title>Planned ${typeLabel} time off: ${formatDate(leave.startDate)}${leave.startDate === leave.endDate ? "" : ` – ${formatDate(leave.endDate)}`}</title>
         </rect>
         <line x1="${startX}" y1="${top}" x2="${startX}" y2="${top + graphHeight}" stroke="#c2410c" stroke-dasharray="2 3"/>
         <line x1="${Math.max(startX, endX)}" y1="${top}" x2="${Math.max(startX, endX)}" y2="${top + graphHeight}" stroke="#c2410c" stroke-dasharray="2 3"/>
@@ -915,10 +915,10 @@
   function openVacationModal(focusForm, type = "", listOnly = false) {
     $("vacation-form").hidden = listOnly;
     vacationModal.classList.toggle("logs-only", listOnly);
-    $("vacation-modal-title").textContent = listOnly ? "Leave logs" : "Leave log";
+    $("vacation-modal-title").textContent = listOnly ? "Time-off logs" : "Time-off log";
     $("vacation-modal-description").textContent = listOnly
       ? "Review your logged and planned time off."
-      : "Plan one-day or multi-day leave and see the projected balances after it.";
+      : "Plan one-day or multi-day time off and see the projected balances after it.";
     if (type === "std" || type === "flex") {
       $("vacationType").value = type;
       renderVacationPreview();
@@ -1000,8 +1000,8 @@
 
     if (!start || !end) {
       preview.textContent = isMultiDay
-        ? "Choose dates to preview this leave."
-        : "Choose a date to preview this leave.";
+        ? "Choose dates to preview this time off."
+        : "Choose a date to preview this time off.";
       return;
     }
     if (end < start) {
@@ -1013,8 +1013,8 @@
     const leave = vacationFormLeave();
     if (!leave) {
       preview.textContent = isMultiDay
-        ? "Enter hours per day to preview this leave."
-        : "Enter a PTO duration to preview this leave.";
+        ? "Enter hours per day to preview this time off."
+        : "Enter a PTO duration to preview this time off.";
       preview.classList.add("warning");
       return;
     }
@@ -1023,10 +1023,10 @@
     const typeLabel = leave.type === "std" ? "Standard" : "Flexible";
     const scheduleLabel = leave.weekdaysOnly ? "weekdays only" : "every day";
     const overlapWarning = overlapsExistingLeave(leave)
-      ? " This overlaps an existing planned leave."
+      ? " This overlaps existing planned time off."
       : "";
     if (!dayCount) {
-      preview.textContent = `${leaveDateLabel(leave)} has no ${scheduleLabel} leave days.`;
+      preview.textContent = `${leaveDateLabel(leave)} has no scheduled ${scheduleLabel} days.`;
       preview.classList.add("warning");
       return;
     }
@@ -1106,7 +1106,7 @@
     const start = leave && safeDate(leave.startDate);
     const end = leave && safeDate(leave.endDate);
     if (!leave || !start || !end || end < start || !leaveDayCount(leave)) {
-      $("vacation-status").textContent = "Choose a valid date range with at least one leave day.";
+      $("vacation-status").textContent = "Choose a valid date range with at least one time-off day.";
       return;
     }
     const overlapping = overlapsExistingLeave(leave);
@@ -1116,10 +1116,10 @@
     const after = balanceAt(end);
     resetVacationForm();
     $("vacation-status").textContent = overlapping
-      ? "Leave added. It overlaps an existing planned leave."
+      ? "Time off added. It overlaps existing planned time off."
       : after && (after.std < 0 || after.flex < 0)
-        ? "Leave added. Balance warning: not enough PTO after this leave."
-        : "Leave added.";
+        ? "Time off added. Balance warning: not enough PTO after this time off."
+        : "Time off added.";
     setTimeout(() => { $("vacation-status").textContent = ""; }, 2500);
   });
 

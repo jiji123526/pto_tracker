@@ -14,11 +14,11 @@
       <header>
         <div class="page-heading">
           <div class="title-row">
-            <h1>Time off &amp; leave</h1>
+            <h1>Time off</h1>
             <button id="guide-button" class="info-button" type="button" aria-label="Open user guide" title="User guide">i</button>
           </div>
           <div class="header-actions">
-            <button id="add-vacation-button" class="header-button" type="button">Add leave</button>
+            <button id="add-vacation-button" class="header-button" type="button">Add time off</button>
           </div>
         </div>
       </header>
@@ -183,9 +183,9 @@
             </div>
             <div class="definition-content">
               <p><strong>Current balance:</strong> Your balance as of today.</p>
-              <p><strong>Planned time off:</strong> The total PTO scheduled for today and future leave requests.</p>
+              <p><strong>Planned time off:</strong> The total PTO scheduled for today and future time-off requests.</p>
               <p><strong>Available balance:</strong> Your current balance minus planned time off.</p>
-              <p><strong>Balance by date:</strong> Your estimated balance on a selected future date, including scheduled accruals and planned leave usage.</p>
+              <p><strong>Balance by date:</strong> Your estimated balance on a selected future date, including scheduled accruals and planned time-off usage.</p>
             </div>
           </div>
         </dialog>
@@ -193,7 +193,7 @@
         <section id="projection-section">
           <div class="section-heading">
             <h2>52-week projection</h2>
-            <small>Includes logged leave usage</small>
+            <small>Includes logged time-off usage</small>
           </div>
           <div class="chart-wrap">
             <svg id="chart" viewBox="0 0 760 300" role="img" aria-label="52-week PTO projection chart"></svg>
@@ -205,7 +205,7 @@
             <span class="combined">Combined</span>
             <span class="cap">Flexible rollover cap</span>
             <span class="new-year">New Year grant</span>
-            <span class="planned">Planned leave</span>
+            <span class="planned">Planned time off</span>
           </div>
         </section>
 
@@ -226,16 +226,16 @@
           <div class="modal-panel">
             <div class="modal-heading">
               <div>
-                <h2 id="vacation-modal-title">Leave log</h2>
-                <p id="vacation-modal-description" class="muted">Plan one-day or multi-day leave and see the projected balances after it.</p>
+                <h2 id="vacation-modal-title">Time-off log</h2>
+                <p id="vacation-modal-description" class="muted">Plan one-day or multi-day time off and see the projected balances after it.</p>
               </div>
-              <button id="vacation-close" class="secondary modal-close" type="button" aria-label="Close leave log">Close</button>
+              <button id="vacation-close" class="secondary modal-close" type="button" aria-label="Close time-off log">Close</button>
             </div>
             <form id="vacation-form">
               <label class="toggle-row">
                 <input id="vacationMultiDay" type="checkbox">
                 <span>
-                  <strong>Multi-day leave</strong>
+                  <strong>Multi-day time off</strong>
                   <small>Use a date range and daily hours.</small>
                 </span>
               </label>
@@ -272,9 +272,9 @@
                   <input id="vacationNote" type="text" maxlength="120" placeholder="Optional">
                 </label>
               </div>
-              <div id="vacation-preview" class="leave-preview" aria-live="polite">Choose dates to preview this leave.</div>
+              <div id="vacation-preview" class="leave-preview" aria-live="polite">Choose dates to preview this time off.</div>
               <div class="actions">
-                <button type="submit">Add leave</button>
+                <button type="submit">Add time off</button>
                 <span id="vacation-status" class="status" aria-live="polite"></span>
               </div>
             </form>
@@ -284,13 +284,13 @@
               </div>
               <div id="vacation-empty" class="vacation-empty" hidden>
                 <div class="vacation-empty-icon" aria-hidden="true">✓</div>
-                <strong>No leave logs yet</strong>
-                <p>Add planned leave from the main page to see it here.</p>
+                <strong>No time-off entries yet</strong>
+                <p>Add planned time off from the main page to see it here.</p>
               </div>
               <div id="vacation-table-wrap" class="table-scroll">
                 <table>
                   <thead>
-                    <tr><th>Dates</th><th>Type</th><th>Leave</th><th>Balance after leave</th><th>Note</th><th></th></tr>
+                    <tr><th>Dates</th><th>Type</th><th>Time off</th><th>Balance after</th><th>Note</th><th></th></tr>
                   </thead>
                   <tbody id="vacations"></tbody>
                 </table>
@@ -312,9 +312,9 @@
               <h3>1. Set your status</h3>
               <p>Enter your employment type, class, pay frequency, hire date, and starting PTO balances, then select <strong>Save status</strong>.</p>
               <h3>2. Check your balance</h3>
-              <p>Your current balance includes completed pay periods and logged leave. Use the date picker in the balance section to estimate a future balance.</p>
-              <h3>3. Log planned leave</h3>
-              <p>Select <strong>Add leave</strong> to record Flexible or Standard PTO. Multi-day leave can use a date range and weekdays-only scheduling.</p>
+              <p>Your current balance includes completed pay periods and logged time off. Use the date picker in the balance section to estimate a future balance.</p>
+              <h3>3. Log planned time off</h3>
+              <p>Select <strong>Add time off</strong> to record Flexible or Standard PTO. Multi-day time off can use a date range and weekdays-only scheduling.</p>
               <h3>4. Review the projection</h3>
               <p>The 52-week projection shows how your Standard, Flexible, and combined balances may change over time.</p>
               <h3>5. Back up your data</h3>

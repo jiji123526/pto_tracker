@@ -2,15 +2,15 @@
 
 A local-only PTO balance tracker built with vanilla HTML, CSS, and JavaScript.
 
-The app estimates Standard PTO and Flexible PTO balances, logs planned leave, and projects balances up to 52 weeks into the future. Data stays in the browser and is never sent to a server.
+The app estimates Standard PTO and Flexible PTO balances, logs planned time off, and projects balances up to 52 weeks into the future. Data stays in the browser and is never sent to a server.
 
 ## Features
 
 - Configure employment type, employee class, pay frequency, hire date, and current PTO balances
 - Track Standard PTO and Flexible PTO separately
 - View current balances and balances for a future date
-- Log one-day or multi-day leave
-- Support weekday-only multi-day leave
+- Log one-day or multi-day time off
+- Support weekday-only multi-day time off
 - See a 52-week SVG balance projection
 - Review PTO policy tables and caps
 - Export and import local data as JSON
@@ -32,7 +32,7 @@ No build step or dependency installation is required.
 
 ### Starting balance
 
-The Standard PTO and Flexible PTO values entered in **Your status** are treated as the saved balances for the current date. Future calculations add accruals and subtract logged leave after that date.
+The Standard PTO and Flexible PTO values entered in **Your status** are treated as the saved balances for the current date. Future calculations add accruals and subtract logged time off after that date.
 
 ### Standard PTO
 
