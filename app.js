@@ -11,7 +11,6 @@
     employeeClass: "",
     payFrequency: "",
     hireDate: "",
-    balanceAsOf: "",
     viewDate: "",
     viewDateSelected: false,
     stdMin: 0,
@@ -162,7 +161,6 @@
     const next = { ...DEFAULT_STATE, ...source };
     const hasCompleteSettings = Boolean(
       safeDate(source.hireDate)
-      && safeDate(source.balanceAsOf)
       && ["hourly", "salaried"].includes(source.employmentType)
       && ["F", "R", "H"].includes(source.employeeClass)
       && ["weekly", "biweekly", "monthly"].includes(source.payFrequency)
@@ -172,8 +170,8 @@
     next.employeeClass = ["F", "R", "H"].includes(next.employeeClass) ? next.employeeClass : "";
     next.payFrequency = ["weekly", "biweekly", "monthly"].includes(next.payFrequency) ? next.payFrequency : "";
     next.hireDate = safeDate(next.hireDate) ? next.hireDate : "";
-    next.balanceAsOf = safeDate(next.balanceAsOf) ? next.balanceAsOf : "";
-    next.viewDate = safeDate(next.viewDate) ? next.viewDate : "";
+    const currentDate = dateString(new Date());
+    next.viewDate = safeDate(next.viewDate) && next.viewDate >= currentDate ? next.viewDate : "";
     next.viewDateSelected = next.viewDateSelected === true && Boolean(next.viewDate);
     if (!next.viewDateSelected) next.viewDate = "";
     next.stdMin = Math.max(0, Math.round(Number(next.stdMin) || 0));
@@ -267,8 +265,8 @@
   }
 
   function balanceAt(targetDate) {
-    const asOf = safeDate(state.balanceAsOf);
-    if (!state.configured || !asOf || !targetDate || targetDate < asOf) return null;
+    const asOf = todayDate();
+    if (!state.configured || !targetDate || targetDate < asOf) return null;
 
     let std = Math.min(STANDARD_CAP_MIN, state.stdMin);
     let flex = state.flexMin;
@@ -381,8 +379,6 @@
     $("employeeClass").value = state.employeeClass || "";
     $("payFrequency").value = state.payFrequency || "";
     $("hireDate").value = state.hireDate;
-    $("balanceAsOf").value = state.balanceAsOf;
-    $("balanceAsOf").max = dateString(todayDate());
     $("stdHours").value = Math.floor(state.stdMin / 60);
     $("stdMinutes").value = state.stdMin % 60;
     $("flexHours").value = Math.floor(state.flexMin / 60);
@@ -401,7 +397,6 @@
       employeeClass: $("employeeClass").value,
       payFrequency: $("payFrequency").value,
       hireDate: $("hireDate").value,
-      balanceAsOf: $("balanceAsOf").value,
       stdMin: stdHours * 60 + stdMinutes,
       flexMin: flexHours * 60 + flexMinutes
     });
@@ -439,17 +434,16 @@
       : "";
     const warnings = [];
     if (!configured) warnings.push("Complete your status above to calculate your live balance.");
-    else if (!current) warnings.push("Your balance date is in the future, so a live balance is not available yet.");
     if (std < 0 || flex < 0) warnings.push("Not enough PTO for the logged usage.");
     if (std >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
     if (flex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
     $("policy-warning").innerHTML = warnings.length
       ? warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("")
-      : `<div class="notice info">Live balance is calculated from your saved balance date.</div>`;
+      : `<div class="notice info">Live balance is calculated from today's saved balances.</div>`;
   }
 
   function renderSelectedDate() {
-    $("viewDate").min = state.balanceAsOf;
+    $("viewDate").min = dateString(todayDate());
     $("viewDate").max = "";
     $("viewDate").value = state.viewDateSelected ? state.viewDate : "";
     if (!state.viewDateSelected || !safeDate(state.viewDate)) {
@@ -493,8 +487,8 @@
       $("view-flex-progress").style.width = "0%";
       $("view-flex-progress").classList.remove("amber");
       $("view-flex-cap-label").textContent = "";
-      $("view-date-note").textContent = `Choose ${formatDate(state.balanceAsOf)} or later.`;
-      $("view-warning").innerHTML = `<div class="notice error">The selected date is before the starting balance date.</div>`;
+      $("view-date-note").textContent = `Choose ${formatDate(dateString(todayDate()))} or later.`;
+      $("view-warning").innerHTML = `<div class="notice error">The selected date is before today's starting balance.</div>`;
       return;
     }
     $("view-total-balance").textContent = formatMinutes(result.combined);
@@ -514,7 +508,7 @@
     $("view-flex-progress").style.width = `${percent}%`;
     $("view-flex-progress").classList.toggle("amber", percent > 90);
     $("view-flex-cap-label").textContent = `${Math.round(percent)}% of 108h rollover cap`;
-    $("view-date-note").textContent = `${result.periods} completed ${state.payFrequency} pay period${result.periods === 1 ? "" : "s"} since ${formatDate(state.balanceAsOf)}.`;
+    $("view-date-note").textContent = `${result.periods} completed ${state.payFrequency} pay period${result.periods === 1 ? "" : "s"} since today.`;
     const warnings = [];
     if (result.std < 0 || result.flex < 0) warnings.push("Not enough PTO for the logged usage.");
     if (result.std >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
@@ -646,7 +640,7 @@
       const after = balanceAt(safeDate(item.endDate));
       const balanceAfter = after
         ? `<span class="balance-line${after.std < 0 ? " balance-negative" : ""}">Std ${formatMinutes(after.std)}</span><span class="balance-line${after.flex < 0 ? " balance-negative" : ""}">Flex ${formatMinutes(after.flex)}</span>`
-        : `<span class="muted">Before starting balance</span>`;
+        : `<span class="muted">Before today's starting balance</span>`;
       const dayCount = leaveDayCount(item);
       const isMultiDay = item.startDate !== item.endDate;
       const dayLabel = isMultiDay
@@ -686,6 +680,7 @@
   $("settings-toggle").addEventListener("click", expandSettings);
 
   const vacationModal = $("vacation-modal");
+  const guideModal = $("guide-modal");
 
   function openVacationModal(focusForm) {
     if (!vacationModal.open) vacationModal.showModal();
@@ -698,6 +693,11 @@
   $("vacation-close").addEventListener("click", () => vacationModal.close());
   vacationModal.addEventListener("click", event => {
     if (event.target === vacationModal) vacationModal.close();
+  });
+  $("guide-button").addEventListener("click", () => guideModal.showModal());
+  $("guide-close").addEventListener("click", () => guideModal.close());
+  guideModal.addEventListener("click", event => {
+    if (event.target === guideModal) guideModal.close();
   });
 
   function newLeaveId() {

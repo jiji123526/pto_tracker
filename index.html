@@ -13,8 +13,9 @@
     <div class="app-main">
       <header>
         <div class="page-heading">
-          <div>
+          <div class="title-row">
             <h1>Time off &amp; leave</h1>
+            <button id="guide-button" class="info-button" type="button" aria-label="Open user guide" title="User guide">i</button>
           </div>
           <div class="header-actions">
             <button id="add-vacation-button" class="header-button" type="button">Add leave</button>
@@ -36,6 +37,7 @@
               <label>
                 Employment type
                 <select id="employmentType">
+                  <option value="" selected disabled>Select employment type</option>
                   <option value="hourly">Hourly</option>
                   <option value="salaried">Salaried</option>
                 </select>
@@ -43,6 +45,7 @@
               <label>
                 Employee class
                 <select id="employeeClass">
+                  <option value="" selected disabled>Select employee class</option>
                   <option value="F">Class F</option>
                   <option value="R">Class R</option>
                   <option value="H">Class H</option>
@@ -51,6 +54,7 @@
               <label>
                 Pay frequency
                 <select id="payFrequency">
+                  <option value="" selected disabled>Select pay frequency</option>
                   <option value="weekly">Weekly</option>
                   <option value="biweekly">Biweekly</option>
                   <option value="monthly">Monthly</option>
@@ -60,11 +64,6 @@
                 Hire date
                 <input id="hireDate" type="date" required>
               </label>
-              <label>
-                Balances as of
-                <input id="balanceAsOf" type="date" required>
-              </label>
-              <div></div>
               <label>
                 Standard PTO hours
                 <input id="stdHours" type="number" min="0" step="1" required>
@@ -92,7 +91,7 @@
 
         <section id="current-section">
           <h2>Current balance</h2>
-          <p class="muted">Live estimate as of <span id="today-label"></span>. It includes completed pay periods and logged usage since your balance date.</p>
+          <p class="muted">Live estimate as of <span id="today-label"></span>. It uses today's saved balances and includes future accruals and logged usage.</p>
           <div class="balance-overview">
             <div class="balance-total-label">Total Available Balance</div>
             <div id="total-balance" class="balance-total">—</div>
@@ -258,6 +257,30 @@
                   <tbody id="vacations"></tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </dialog>
+
+        <dialog id="guide-modal" aria-labelledby="guide-modal-title">
+          <div class="guide-panel">
+            <div class="modal-heading">
+              <div>
+                <h2 id="guide-modal-title">Quick guide</h2>
+                <p class="muted">A few notes to help you get started.</p>
+              </div>
+              <button id="guide-close" class="secondary modal-close" type="button" aria-label="Close user guide">Close</button>
+            </div>
+            <div class="guide-content">
+              <h3>1. Set your status</h3>
+              <p>Enter your employment type, class, pay frequency, hire date, and starting PTO balances, then select <strong>Save status</strong>.</p>
+              <h3>2. Check your balance</h3>
+              <p>Your current balance includes completed pay periods and logged leave. Use <strong>Balance by date</strong> to estimate a future balance.</p>
+              <h3>3. Log planned leave</h3>
+              <p>Select <strong>Add leave</strong> to record Flexible or Standard PTO. Multi-day leave can use a date range and weekdays-only scheduling.</p>
+              <h3>4. Review the projection</h3>
+              <p>The 52-week projection shows how your Standard, Flexible, and combined balances may change over time.</p>
+              <h3>5. Back up your data</h3>
+              <p>Your data stays in this browser. Use <strong>Export JSON</strong> to save a backup before clearing browser data or changing devices.</p>
             </div>
           </div>
         </dialog>

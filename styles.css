@@ -43,6 +43,12 @@ header {
   gap: 20px;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 h1, h2, h3 {
   margin: 0;
   line-height: 1.2;
@@ -51,6 +57,27 @@ h1, h2, h3 {
 h1 {
   font-size: 22px;
   letter-spacing: -.3px;
+}
+
+.info-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  color: var(--muted);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.info-button:hover {
+  color: var(--text);
+  background: #f5f7fa;
 }
 
 h2 {
@@ -627,6 +654,23 @@ dialog::backdrop {
   overflow-y: auto;
 }
 
+.guide-panel {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.guide-content {
+  padding: 4px 28px 24px;
+}
+
+.guide-content h3 {
+  margin-top: 16px;
+}
+
+.guide-content p {
+  margin: 5px 0 0;
+}
+
 .modal-heading {
   display: flex;
   align-items: flex-start;
@@ -772,6 +816,10 @@ footer {
 
   .modal-heading p {
     font-size: 14px;
+  }
+
+  .guide-content {
+    padding: 2px 18px 18px;
   }
 
   #vacation-form {
