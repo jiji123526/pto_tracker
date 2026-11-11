@@ -829,6 +829,7 @@
     $("vacation-summary").textContent = hasLogs
       ? `Logged total: ${formatHours(stdTotal)} Standard, ${formatHours(flexTotal)} Flexible`
       : "";
+    $("vacation-list-header").hidden = !hasLogs;
     $("vacation-empty").hidden = hasLogs;
     $("vacation-table-wrap").hidden = !hasLogs;
     $("vacations").innerHTML = hasLogs ? sorted.map(item => {

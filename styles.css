@@ -942,6 +942,13 @@ dialog::backdrop {
   padding: 0 28px 26px;
 }
 
+.vacation-list-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 12px;
+  text-align: right;
+}
+
 .vacation-empty {
   display: grid;
   justify-items: center;
