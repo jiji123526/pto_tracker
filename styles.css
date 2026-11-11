@@ -144,6 +144,10 @@ section {
   border-bottom: 1px solid var(--soft-border);
 }
 
+.section-heading h2 {
+  padding: 12px 0;
+}
+
 .section-heading-actions {
   display: flex;
   align-items: center;
@@ -423,7 +427,7 @@ button.danger {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 10px 8px;
+  padding: 10px 0;
   border-bottom: 1px solid var(--soft-border);
 }
 
@@ -450,7 +454,7 @@ button.danger {
 }
 
 .requests-empty {
-  padding: 18px 8px;
+  padding: 18px 0;
   font-size: 16px;
 }
 
@@ -602,7 +606,7 @@ button.danger {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 10px 8px;
+  padding: 10px 0;
   color: var(--text);
   border-bottom: 1px solid var(--soft-border);
 }
