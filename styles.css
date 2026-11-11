@@ -565,7 +565,6 @@ button.danger {
 }
 
 #projection-section .section-heading,
-#holidays-section .section-heading,
 #policy-section > details,
 #backup-section > h2 {
   border-bottom: 1px solid var(--soft-border);
@@ -575,6 +574,23 @@ button.danger {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.holiday-summary {
+  position: relative;
+}
+
+.holiday-summary-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.holiday-summary > strong {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
 }
 
 .holiday-list {

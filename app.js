@@ -951,6 +951,11 @@
     if (event.target === balanceDefinitionsModal) balanceDefinitionsModal.close();
   });
 
+  $("holidays-info").addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
   function newLeaveId() {
     return `leave-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   }

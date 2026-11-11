@@ -210,14 +210,16 @@
         </section>
 
         <section id="holidays-section">
-          <div class="section-heading">
-            <h2 class="section-title-with-info">
-              <span>Amazon holidays</span>
-              <button class="info-button field-info-button" type="button" aria-label="About Amazon holidays" title="Observed US holidays">i</button>
-            </h2>
-            <strong id="holidays-year"></strong>
-          </div>
-          <div id="holiday-list" class="holiday-list"></div>
+          <details id="holidays-details">
+            <summary class="holiday-summary">
+              <span class="holiday-summary-title">
+                <span>Amazon holidays</span>
+                <button id="holidays-info" class="info-button field-info-button" type="button" aria-label="About Amazon holidays" title="Observed US holidays">i</button>
+              </span>
+              <strong id="holidays-year"></strong>
+            </summary>
+            <div id="holiday-list" class="holiday-list"></div>
+          </details>
         </section>
 
         <dialog id="vacation-modal" aria-labelledby="vacation-modal-title">
