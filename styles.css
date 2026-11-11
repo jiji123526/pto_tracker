@@ -359,6 +359,7 @@ button.danger {
 }
 
 .chart-wrap {
+  position: relative;
   overflow-x: auto;
   padding: 12px;
 }
@@ -368,6 +369,49 @@ button.danger {
   width: 100%;
   min-width: 660px;
   height: 300px;
+  cursor: crosshair;
+}
+
+.chart-tooltip {
+  position: fixed;
+  z-index: 20;
+  display: none;
+  min-width: 156px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .16);
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.chart-tooltip.is-visible {
+  display: block;
+}
+
+.chart-tooltip-title {
+  margin-bottom: 1px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.chart-tooltip-date {
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--muted);
+}
+
+.chart-tooltip-row strong {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .legend {
@@ -507,6 +551,10 @@ th { color: var(--muted); font-weight: 700; }
 
 .multi-day-only.is-hidden {
   display: none;
+}
+
+.is-hidden {
+  display: none !important;
 }
 
 .checkbox-label {

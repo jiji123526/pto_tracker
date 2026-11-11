@@ -437,7 +437,7 @@
     $("viewDate").max = "";
     $("viewDate").value = state.viewDateSelected ? state.viewDate : "";
     if (!state.viewDateSelected || !safeDate(state.viewDate)) {
-      $("view-date-copy").textContent = "Choose a date to see your estimated balance. Planned vacation usage is included.";
+      $("view-date-copy").textContent = "Choose a date to see your estimated balance. Planned leave usage is included.";
       $("view-balance-overview").style.display = "none";
       $("view-balance-cards").style.display = "none";
       $("view-total-balance").textContent = "—";
@@ -459,7 +459,7 @@
     }
 
     const target = safeDate(state.viewDate);
-    $("view-date-copy").textContent = `Estimated balance for ${formatDate(state.viewDate)}. Planned vacation usage is included.`;
+    $("view-date-copy").textContent = `Estimated balance for ${formatDate(state.viewDate)}. Planned leave usage is included.`;
     $("view-balance-overview").style.display = "";
     $("view-balance-cards").style.display = "";
     const result = balanceAt(target);
@@ -516,7 +516,11 @@
     const bottom = 34;
     const graphWidth = width - left - right;
     const graphHeight = height - top - bottom;
-    const points = Array.from({ length: 53 }, (_, week) => ({ week, ...project(week) }));
+    const points = Array.from({ length: 53 }, (_, week) => ({
+      week,
+      date: addDays(todayDate(), week * 7),
+      ...project(week)
+    }));
     const maxValue = Math.max(FLEX_CAP_MIN, ...points.map(point => Math.max(point.std, point.flex, point.combined, 0)));
     const minValue = 0;
     const x = week => left + (week / 52) * graphWidth;
@@ -527,7 +531,9 @@
       const yy = y(value);
       return `<line x1="${left}" y1="${yy}" x2="${width - right}" y2="${yy}" stroke="#e5e7eb"/><text x="${left - 8}" y="${yy + 4}" text-anchor="end" fill="#66727d" font-size="11">${Math.round(value / 60)}h</text>`;
     }).join("");
-    const xLabels = [0, 13, 26, 39, 52].map(week => `<text x="${x(week)}" y="${height - 8}" text-anchor="middle" fill="#66727d" font-size="11">${week}</text>`).join("");
+    const xLabels = [0, 13, 26, 39, 52]
+      .map(week => `<text x="${x(week)}" y="${height - 19}" text-anchor="middle" fill="#66727d" font-size="11">${week}</text>`)
+      .join("");
     const capY = y(FLEX_CAP_MIN);
     const anniv = anniversaryWeek();
     const annivLine = anniv && anniv <= 52
@@ -540,9 +546,77 @@
       <path d="${linePath("std")}" fill="none" stroke="#2563eb" stroke-width="2.5"/>
       <path d="${linePath("flex")}" fill="none" stroke="#059669" stroke-width="2.5"/>
       <path d="${linePath("combined")}" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+      <g id="chart-hover" display="none">
+        <line id="chart-hover-line" x1="${x(0)}" y1="${top}" x2="${x(0)}" y2="${top + graphHeight}" stroke="#64748b" stroke-dasharray="3 3"/>
+        <circle id="chart-hover-std" cx="${x(0)}" cy="${y(points[0].std)}" r="4" fill="#2563eb" stroke="#fff" stroke-width="2"/>
+        <circle id="chart-hover-flex" cx="${x(0)}" cy="${y(points[0].flex)}" r="4" fill="#059669" stroke="#fff" stroke-width="2"/>
+        <circle id="chart-hover-combined" cx="${x(0)}" cy="${y(points[0].combined)}" r="4" fill="#7c3aed" stroke="#fff" stroke-width="2"/>
+      </g>
+      <rect id="chart-hover-target" x="${left}" y="${top}" width="${graphWidth}" height="${graphHeight}" fill="transparent" pointer-events="all"/>
       ${xLabels}
-      <text x="${width - right}" y="${height - 8}" text-anchor="end" fill="#66727d" font-size="11">weeks from now</text>
+      <text x="${left + graphWidth / 2}" y="${height - 4}" text-anchor="middle" fill="#66727d" font-size="11">weeks from now</text>
     `;
+    bindChartHover(points, { width, left, top, graphWidth, graphHeight });
+  }
+
+  function bindChartHover(points, chart) {
+    const svg = $("chart");
+    const target = $("chart-hover-target");
+    const hover = $("chart-hover");
+    const tooltip = $("chart-tooltip");
+    if (!svg || !target || !hover || !tooltip) return;
+
+    function hide() {
+      hover.setAttribute("display", "none");
+      tooltip.classList.remove("is-visible");
+    }
+
+    function show(event) {
+      const bounds = svg.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const svgX = ((event.clientX - bounds.left) / bounds.width) * 760;
+      const clampedX = Math.max(chart.left, Math.min(chart.left + chart.graphWidth, svgX));
+      const week = Math.max(0, Math.min(52, Math.round(((clampedX - chart.left) / chart.graphWidth) * 52)));
+      const point = points[week];
+      const pointX = chart.left + (week / 52) * chart.graphWidth;
+
+      $("chart-hover-line").setAttribute("x1", pointX);
+      $("chart-hover-line").setAttribute("x2", pointX);
+      $("chart-hover-std").setAttribute("cx", pointX);
+      $("chart-hover-std").setAttribute("cy", pointY(point.std));
+      $("chart-hover-flex").setAttribute("cx", pointX);
+      $("chart-hover-flex").setAttribute("cy", pointY(point.flex));
+      $("chart-hover-combined").setAttribute("cx", pointX);
+      $("chart-hover-combined").setAttribute("cy", pointY(point.combined));
+      hover.setAttribute("display", "");
+
+      tooltip.innerHTML = `
+        <div class="chart-tooltip-title">${week === 0 ? "Today" : `In ${week} week${week === 1 ? "" : "s"}`}</div>
+        <div class="chart-tooltip-date">${formatDate(dateString(point.date))}</div>
+        <div class="chart-tooltip-row"><span>Standard</span><strong>${formatMinutes(point.std)}</strong></div>
+        <div class="chart-tooltip-row"><span>Flexible</span><strong>${formatMinutes(point.flex)}</strong></div>
+        <div class="chart-tooltip-row"><span>Total</span><strong>${formatMinutes(point.combined)}</strong></div>
+      `;
+      tooltip.classList.add("is-visible");
+
+      const offset = 14;
+      const tooltipWidth = tooltip.offsetWidth || 180;
+      const tooltipHeight = tooltip.offsetHeight || 100;
+      const left = Math.min(window.innerWidth - tooltipWidth - 8, event.clientX + offset);
+      const top = Math.min(window.innerHeight - tooltipHeight - 8, event.clientY + offset);
+      tooltip.style.left = `${Math.max(8, left)}px`;
+      tooltip.style.top = `${Math.max(8, top)}px`;
+    }
+
+    function pointY(value) {
+      const maxValue = Math.max(FLEX_CAP_MIN, ...points.map(point => Math.max(point.std, point.flex, point.combined, 0)));
+      return chart.top + chart.graphHeight - (Math.max(0, value) / (maxValue || 1)) * chart.graphHeight;
+    }
+
+    target.addEventListener("mousemove", show);
+    target.addEventListener("mouseenter", show);
+    target.addEventListener("mouseleave", hide);
+    window.addEventListener("blur", hide);
   }
 
   function renderVacations() {
@@ -551,7 +625,7 @@
     const flexTotal = sorted.filter(item => item.type === "flex").reduce((sum, item) => sum + leaveTotalHours(item), 0);
     $("vacation-summary").textContent = sorted.length
       ? `Logged total: ${formatHours(stdTotal)} Standard, ${formatHours(flexTotal)} Flexible`
-      : "No vacations logged.";
+      : "No leave logged.";
     $("vacations").innerHTML = sorted.length ? sorted.map(item => {
       const after = balanceAt(safeDate(item.endDate));
       const balanceAfter = after
@@ -566,7 +640,7 @@
       const schedule = isMultiDay ? `<small class="leave-schedule">${scheduleLabel}</small>` : "";
       const perDay = isMultiDay ? `<small class="leave-schedule">${formatHours(item.hoursPerDay)}/day</small>` : "";
       return `<tr><td>${leaveDateLabel(item)}${schedule}</td><td>${item.type === "std" ? "Standard" : "Flexible"}</td><td>${dayLabel}${perDay}</td><td class="balance-cell">${balanceAfter}</td><td>${escapeHtml(item.note)}</td><td class="right"><button class="danger small-button" type="button" data-remove="${escapeHtml(item.id)}">Remove</button></td></tr>`;
-    }).join("") : `<tr><td colspan="6" class="empty">Add planned vacation to include it in projections.</td></tr>`;
+    }).join("") : `<tr><td colspan="6" class="empty">Add planned leave to include it in projections.</td></tr>`;
   }
 
   function escapeHtml(value) {
@@ -692,7 +766,7 @@
 
   function syncVacationMode() {
     const isMultiDay = $("vacationMultiDay").checked;
-    $("vacation-form").classList.toggle("is-multi-day", isMultiDay);
+    $("vacation-form").querySelector(".vacation-form").classList.toggle("is-multi-day", isMultiDay);
     $("vacation-end-date-field").classList.add("multi-day-only");
     $("vacation-weekdays-field").classList.add("multi-day-only");
     $("vacation-end-date-field").classList.toggle("is-hidden", !isMultiDay);
@@ -769,10 +843,10 @@
     const after = balanceAt(end);
     resetVacationForm();
     $("vacation-status").textContent = overlapping
-      ? "Vacation added. It overlaps an existing planned leave."
+      ? "Leave added. It overlaps an existing planned leave."
       : after && (after.std < 0 || after.flex < 0)
-        ? "Vacation added. Balance warning: not enough PTO after this leave."
-        : "Vacation added.";
+        ? "Leave added. Balance warning: not enough PTO after this leave."
+        : "Leave added.";
     setTimeout(() => { $("vacation-status").textContent = ""; }, 2500);
   });
 

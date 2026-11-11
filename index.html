@@ -17,7 +17,7 @@
             <h1>Time off &amp; leave</h1>
           </div>
           <div class="header-actions">
-            <button id="add-vacation-button" class="header-button" type="button">Add vacation</button>
+            <button id="add-vacation-button" class="header-button" type="button">Add leave</button>
           </div>
         </div>
       </header>
@@ -134,7 +134,7 @@
 
         <section id="date-section">
           <h2>Balance by date</h2>
-          <p class="muted" id="view-date-copy">Choose a date to see your estimated balance. Planned vacation usage is included.</p>
+          <p class="muted" id="view-date-copy">Choose a date to see your estimated balance. Planned leave usage is included.</p>
           <div class="balance-date-control">
             <label>
               See balance on
@@ -178,10 +178,11 @@
         <section id="projection-section">
           <div class="section-heading">
             <h2>52-week projection</h2>
-            <small>Includes logged vacation usage</small>
+            <small>Includes logged leave usage</small>
           </div>
           <div class="chart-wrap">
             <svg id="chart" viewBox="0 0 760 300" role="img" aria-label="52-week PTO projection chart"></svg>
+            <div id="chart-tooltip" class="chart-tooltip" role="status" aria-live="polite"></div>
           </div>
           <div class="legend">
             <span class="std">Standard</span>
@@ -195,10 +196,10 @@
           <div class="modal-panel">
             <div class="modal-heading">
               <div>
-                <h2 id="vacation-modal-title">Vacation log</h2>
+                <h2 id="vacation-modal-title">Leave log</h2>
                 <p class="muted">Plan one-day or multi-day leave and see the projected balances after it.</p>
               </div>
-              <button id="vacation-close" class="secondary modal-close" type="button" aria-label="Close vacation log">Close</button>
+              <button id="vacation-close" class="secondary modal-close" type="button" aria-label="Close leave log">Close</button>
             </div>
             <form id="vacation-form">
               <label class="toggle-row">
@@ -243,7 +244,7 @@
               </div>
               <div id="vacation-preview" class="leave-preview" aria-live="polite">Choose dates to preview this leave.</div>
               <div class="actions">
-                <button type="submit">Add vacation</button>
+                <button type="submit">Add leave</button>
                 <span id="vacation-status" class="status" aria-live="polite"></span>
               </div>
             </form>
