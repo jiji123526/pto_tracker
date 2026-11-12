@@ -529,12 +529,6 @@
       $("flex-progress").style.width = `${percent}%`;
       $("flex-progress").classList.toggle("amber", percent > 90);
       $("flex-cap-label").textContent = configured ? `${Math.round(percent)}% of 108h rollover cap` : "";
-      const rate = configured ? standardRateHours(state, today) : 0;
-      const derivedRate = (state.employmentType === "hourly" && state.payFrequency === "monthly")
-        || (state.employmentType === "salaried" && state.payFrequency === "weekly");
-      $("std-rate").textContent = configured
-        ? `Current Standard rate: ${formatHours(rate)} per ${state.payFrequency} pay period${derivedRate ? " (derived)" : ""}`
-        : "";
       if (!configured) warnings.push("Complete your status above to calculate your live balance.");
       if (availableStd < 0 || availableFlex < 0) warnings.push("Not enough PTO after planned time off.");
       if (currentStd >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
@@ -593,15 +587,53 @@
     $("flex-progress").style.width = `${percent}%`;
     $("flex-progress").classList.toggle("amber", percent > 90);
     $("flex-cap-label").textContent = `${Math.round(percent)}% of 108h rollover cap`;
-    const rate = configured ? standardRateHours(state, target) : 0;
-    $("std-rate").textContent = configured
-      ? `Projected Standard rate: ${formatHours(rate)} per ${state.payFrequency} pay period`
-      : "";
     $("view-date-note").textContent = `${result.periods} completed ${state.payFrequency} pay period${result.periods === 1 ? "" : "s"} since today.`;
     if (result.std < 0 || result.flex < 0) warnings.push("Not enough PTO for the logged usage.");
     if (result.std >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
     if (result.flex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
     $("policy-warning").innerHTML = warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("");
+  }
+
+  function renderBalanceDefinitions() {
+    const summary = $("personal-accrual-summary");
+    const grid = $("personal-accrual-grid");
+    const note = $("personal-accrual-note");
+    const configured = state.configured
+      && safeDate(state.hireDate)
+      && state.employeeClass
+      && state.payFrequency
+      && state.employmentType;
+
+    if (!configured) {
+      summary.textContent = "Complete your status information to see your personalized accruals.";
+      grid.hidden = true;
+      note.hidden = true;
+      return;
+    }
+
+    const today = todayDate();
+    const hireDate = safeDate(state.hireDate);
+    const yos = yearsOfService(hireDate, today);
+    const standardRate = standardRateHours(state, today);
+    const flexibleRate = flexibleRateHours(state);
+    const frequencyLabel = {
+      weekly: "weekly",
+      biweekly: "biweekly",
+      monthly: "monthly"
+    }[state.payFrequency];
+    const standardIsDerived = (state.employmentType === "hourly" && state.payFrequency === "monthly")
+      || (state.employmentType === "salaried" && state.payFrequency === "weekly");
+
+    summary.textContent = `Class ${state.employeeClass} · ${state.employmentType} · ${frequencyLabel} pay · ${yos} year${yos === 1 ? "" : "s"} of service`;
+    $("personal-standard-rate").textContent = `${formatHours(standardRate)} / pay period`;
+    $("personal-flexible-rate").textContent = `${formatHours(flexibleRate)} / pay period`;
+    $("personal-standard-detail").textContent = standardIsDerived
+      ? "Derived from the annual Standard PTO rate."
+      : "Based on your current Standard PTO tenure tier.";
+    $("personal-flexible-detail").textContent = "Based on your class and pay frequency.";
+    note.textContent = "Standard PTO changes when you reach a new hire-date anniversary tier. Flexible PTO is the same at every tenure.";
+    grid.hidden = false;
+    note.hidden = false;
   }
 
   function renderChart() {
@@ -945,7 +977,10 @@
   });
 
   const balanceDefinitionsModal = $("balance-definitions-modal");
-  $("balance-definitions-button").addEventListener("click", () => balanceDefinitionsModal.showModal());
+  $("balance-definitions-button").addEventListener("click", () => {
+    renderBalanceDefinitions();
+    balanceDefinitionsModal.showModal();
+  });
   $("balance-definitions-close").addEventListener("click", () => balanceDefinitionsModal.close());
   balanceDefinitionsModal.addEventListener("click", event => {
     if (event.target === balanceDefinitionsModal) balanceDefinitionsModal.close();
