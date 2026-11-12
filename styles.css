@@ -307,11 +307,11 @@ button.danger {
 
 #flex-segment {
   background: var(--green);
+  border-left: 1px solid #fff;
 }
 
 #std-segment {
   background: var(--green);
-  border-left: 1px solid #fff;
 }
 
 .balance-bar-labels {
