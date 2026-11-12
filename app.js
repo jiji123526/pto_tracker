@@ -6,12 +6,14 @@
   const STANDARD_CAP_MIN = 160 * 60;
   const BALANCE_PLACEHOLDER = "0 h";
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const WEEKLY_ACCRUAL_WEEKDAY = 6; // Saturday; JavaScript uses Sunday = 0.
   const DEFAULT_STATE = {
     configured: false,
     employmentType: "",
     employeeClass: "",
     payFrequency: "",
     hireDate: "",
+    balanceAsOf: "",
     viewDate: "",
     viewDateSelected: false,
     stdMin: 0,
@@ -86,6 +88,14 @@
     const result = new Date(date);
     result.setFullYear(result.getFullYear() + years);
     return result;
+  }
+
+  function defaultBalanceDate(payFrequency, referenceDate = todayDate()) {
+    if (!referenceDate || (payFrequency !== "weekly" && payFrequency !== "biweekly")) {
+      return referenceDate ? dateString(referenceDate) : dateString(new Date());
+    }
+    const daysSinceSaturday = (referenceDate.getDay() - WEEKLY_ACCRUAL_WEEKDAY + 7) % 7;
+    return dateString(addDays(referenceDate, -daysSinceSaturday));
   }
 
   function yearsOfService(hireDate, date) {
@@ -172,6 +182,16 @@
     next.payFrequency = ["weekly", "biweekly", "monthly"].includes(next.payFrequency) ? next.payFrequency : "";
     next.hireDate = safeDate(next.hireDate) ? next.hireDate : "";
     const currentDate = dateString(new Date());
+    const fallbackBalanceDate = defaultBalanceDate(next.payFrequency, safeDate(currentDate));
+    const savedBalanceDate = safeDate(next.balanceAsOf);
+    const currentDateIsUnanchored = savedBalanceDate
+      && dateString(savedBalanceDate) === currentDate
+      && (next.payFrequency === "weekly" || next.payFrequency === "biweekly");
+    next.balanceAsOf = savedBalanceDate
+      && savedBalanceDate <= safeDate(currentDate)
+      && !currentDateIsUnanchored
+      ? dateString(savedBalanceDate)
+      : fallbackBalanceDate;
     next.viewDate = safeDate(next.viewDate) && next.viewDate >= currentDate ? next.viewDate : "";
     next.viewDateSelected = next.viewDateSelected === true && Boolean(next.viewDate);
     if (!next.viewDateSelected) next.viewDate = "";
@@ -242,16 +262,43 @@
     return result;
   }
 
-  function periodDate(startDate, periodNumber) {
-    if (state.payFrequency === "weekly") return addDays(startDate, periodNumber * 7);
-    if (state.payFrequency === "biweekly") return addDays(startDate, periodNumber * 14);
-    return addMonths(startDate, periodNumber);
+  function nextWeekdayAfter(startDate, weekday) {
+    let date = addDays(startDate, 1);
+    const offset = (weekday - date.getDay() + 7) % 7;
+    return addDays(date, offset);
   }
 
-  function completedPeriods(startDate, endDate) {
-    let periods = 0;
-    while (periodDate(startDate, periods + 1) <= endDate) periods += 1;
-    return periods;
+  function lastSaturdayOfMonth(year, month) {
+    const lastDay = new Date(year, month + 1, 0);
+    const daysSinceSaturday = (lastDay.getDay() - WEEKLY_ACCRUAL_WEEKDAY + 7) % 7;
+    return addDays(lastDay, -daysSinceSaturday);
+  }
+
+  function accrualDates(startDate, endDate) {
+    if (!startDate || !endDate || endDate <= startDate) return [];
+    const dates = [];
+    if (state.payFrequency === "weekly" || state.payFrequency === "biweekly") {
+      const step = state.payFrequency === "biweekly" ? 14 : 7;
+      for (
+        let date = nextWeekdayAfter(startDate, WEEKLY_ACCRUAL_WEEKDAY);
+        date <= endDate;
+        date = addDays(date, step)
+      ) {
+        dates.push(date);
+      }
+      return dates;
+    }
+
+    const monthCursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    for (
+      let month = monthCursor;
+      month <= endDate;
+      month = new Date(month.getFullYear(), month.getMonth() + 1, 1)
+    ) {
+      const date = lastSaturdayOfMonth(month.getFullYear(), month.getMonth());
+      if (date > startDate && date <= endDate) dates.push(date);
+    }
+    return dates;
   }
 
   function flexibleGrantDates(startDate, endDate) {
@@ -266,12 +313,12 @@
   }
 
   function balanceAt(targetDate, includeLeave = true) {
-    const asOf = todayDate();
+    const asOf = safeDate(state.balanceAsOf) || todayDate();
     if (!state.configured || !targetDate || targetDate < asOf) return null;
 
     let std = Math.min(STANDARD_CAP_MIN, state.stdMin);
     let flex = state.flexMin;
-    const periods = completedPeriods(asOf, targetDate);
+    const periods = accrualDates(asOf, targetDate);
     const events = new Map();
 
     function eventFor(date) {
@@ -290,12 +337,11 @@
       return events.get(key);
     }
 
-    for (let period = 1; period <= periods; period += 1) {
-      const accrualDate = periodDate(asOf, period);
+    periods.forEach(accrualDate => {
       const event = eventFor(accrualDate);
       event.stdAccrual += (standardRateHours(state, accrualDate) || 0) * 60;
       event.flexAccrual += flexibleRateHours(state) * 60;
-    }
+    });
 
     flexibleGrantDates(asOf, targetDate).forEach(date => {
       const event = eventFor(date);
@@ -323,7 +369,7 @@
         flex -= event.flexUse;
       });
 
-    return { std, flex, combined: std + flex, periods };
+    return { std, flex, combined: std + flex, periods: periods.length };
   }
 
   function flexibleGrantHours(employeeClass) {
@@ -443,13 +489,15 @@
     const stdMinutes = Math.min(59, Math.max(0, Number($("stdMinutes").value) || 0));
     const flexHours = Math.max(0, Number($("flexHours").value) || 0);
     const flexMinutes = Math.min(59, Math.max(0, Number($("flexMinutes").value) || 0));
+    const payFrequency = $("payFrequency").value;
     state = normalizeState({
       ...state,
       configured: true,
       employmentType: $("employmentType").value,
       employeeClass: $("employeeClass").value,
-      payFrequency: $("payFrequency").value,
+      payFrequency,
       hireDate: $("hireDate").value,
+      balanceAsOf: state.configured ? state.balanceAsOf : defaultBalanceDate(payFrequency),
       stdMin: stdHours * 60 + stdMinutes,
       flexMin: flexHours * 60 + flexMinutes
     });
@@ -533,10 +581,12 @@
       if (availableStd < 0 || availableFlex < 0) warnings.push("Not enough PTO after planned time off.");
       if (currentStd >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
       if (currentFlex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
-      $("view-date-note").textContent = "";
+      $("view-date-note").textContent = configured && current && current.periods
+        ? `${current.periods} completed ${state.payFrequency} pay period${current.periods === 1 ? "" : "s"} since ${formatDate(state.balanceAsOf)}.`
+        : "";
       $("policy-warning").innerHTML = warnings.length
         ? warnings.map(message => `<div class="notice${message.includes("Not enough") ? " error" : ""}">${message}</div>`).join("")
-        : `<div class="notice info">Live balance is calculated from today's saved balances.</div>`;
+        : `<div class="notice info">Balance is calculated from your saved starting balance date and completed pay periods.</div>`;
       return;
     }
 
@@ -587,7 +637,7 @@
     $("flex-progress").style.width = `${percent}%`;
     $("flex-progress").classList.toggle("amber", percent > 90);
     $("flex-cap-label").textContent = `${Math.round(percent)}% of 108h rollover cap`;
-    $("view-date-note").textContent = `${result.periods} completed ${state.payFrequency} pay period${result.periods === 1 ? "" : "s"} since today.`;
+    $("view-date-note").textContent = `${result.periods} completed ${state.payFrequency} pay period${result.periods === 1 ? "" : "s"} since ${formatDate(state.balanceAsOf)}.`;
     if (result.std < 0 || result.flex < 0) warnings.push("Not enough PTO for the logged usage.");
     if (result.std >= STANDARD_CAP_MIN) warnings.push("Standard PTO is at the 160h balance cap; additional accrual may not increase the available balance.");
     if (result.flex > FLEX_CAP_MIN) warnings.push("Flexible PTO is above the 108h rollover cap; excess will not roll over.");
@@ -631,7 +681,7 @@
       ? "Derived from the annual Standard PTO rate."
       : "Based on your current Standard PTO tenure tier.";
     $("personal-flexible-detail").textContent = "Based on your class and pay frequency.";
-    note.textContent = "Standard PTO changes when you reach a new hire-date anniversary tier. Flexible PTO is the same at every tenure.";
+    note.textContent = "Weekly accruals are applied every Saturday, biweekly accruals every other Saturday, and monthly accruals on the last Saturday of each month. Standard PTO changes when you reach a new hire-date anniversary tier; Flexible PTO is the same at every tenure.";
     grid.hidden = false;
     note.hidden = false;
   }

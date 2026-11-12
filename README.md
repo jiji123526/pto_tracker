@@ -32,7 +32,7 @@ No build step or dependency installation is required.
 
 ### Starting balance
 
-The Standard PTO and Flexible PTO values entered in **Your status** are treated as the saved balances for the current date. Future calculations add accruals and subtract logged time off after that date.
+The Standard PTO and Flexible PTO values entered in **Your status** are treated as the saved balances from the initial setup. The app stores that balance date internally, adds completed pay-period accruals after it, and subtracts logged time off after it. Weekly accruals occur every Saturday, biweekly accruals every other Saturday, and monthly accruals occur on the last Saturday of each month.
 
 ### Standard PTO
 
