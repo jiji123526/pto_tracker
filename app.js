@@ -59,6 +59,8 @@
 
   let state = loadState();
   let lastLiveDate = dateString(new Date());
+  let calendarMonth = null;
+  let calendarSelectedDate = "";
 
   function $(id) {
     return document.getElementById(id);
@@ -811,6 +813,135 @@
     }).join("");
   }
 
+  function formatCalendarMonth(date) {
+    return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }
+
+  function formatCalendarDate(date) {
+    return date.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  }
+
+  function calendarRange(month) {
+    const first = new Date(month.getFullYear(), month.getMonth(), 1);
+    const start = addDays(first, -first.getDay());
+    return { start, end: addDays(start, 41) };
+  }
+
+  function calendarEvents(startDate, endDate) {
+    const events = new Map();
+    const addEvent = (date, event) => {
+      const key = dateString(date);
+      if (!events.has(key)) events.set(key, []);
+      events.get(key).push(event);
+    };
+
+    for (let year = startDate.getFullYear(); year <= endDate.getFullYear(); year += 1) {
+      holidaysForYear(year).forEach(holiday => {
+        if (holiday.date >= startDate && holiday.date <= endDate) {
+          addEvent(holiday.date, { kind: "holiday", name: holiday.name });
+        }
+      });
+    }
+
+    state.vacations.forEach(leave => {
+      leaveUsageDates(leave).forEach(({ date, hours }) => {
+        if (date < startDate || date > endDate) return;
+        addEvent(date, {
+          kind: "time-off",
+          id: leave.id,
+          type: leave.type,
+          hours,
+          note: leave.note
+        });
+      });
+    });
+
+    return events;
+  }
+
+  function calendarEventLabel(event) {
+    if (event.kind === "holiday") return event.name;
+    return `${event.type === "std" ? "Std" : "Flex"} · ${formatHours(event.hours)}`;
+  }
+
+  function renderCalendarSelection(events, date) {
+    const selection = $("calendar-selection");
+    if (!selection || !date) return;
+    const isPast = date < todayDate();
+    const eventRows = events.length
+      ? events.map(event => {
+        if (event.kind === "holiday") {
+          return `<div class="calendar-detail-row calendar-detail-holiday"><span>Holiday</span><strong>${escapeHtml(event.name)}</strong></div>`;
+        }
+        const note = event.note ? `<small>${escapeHtml(event.note)}</small>` : "";
+        return `<div class="calendar-detail-row"><span>${event.type === "std" ? "Standard" : "Flexible"} PTO · ${formatHours(event.hours)}</span>${note}</div>`;
+      }).join("")
+      : `<p class="calendar-selection-empty muted">No planned time off or holidays.</p>`;
+    const action = !isPast
+      ? `<button id="calendar-add-time-off" class="secondary small-button" type="button">Add time off</button>`
+      : "";
+
+    selection.innerHTML = `
+      <div class="calendar-selection-copy">
+        <strong>${formatCalendarDate(date)}</strong>
+        <div class="calendar-selection-events">${eventRows}</div>
+      </div>
+      ${action}
+    `;
+  }
+
+  function renderCalendar() {
+    const monthLabel = $("calendar-month");
+    const grid = $("calendar-grid");
+    if (!monthLabel || !grid) return;
+
+    if (!calendarMonth) {
+      const today = todayDate();
+      calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      calendarSelectedDate = dateString(today);
+    }
+
+    const today = todayDate();
+    const todayKey = dateString(today);
+    const selectedDate = safeDate(calendarSelectedDate) || today;
+    const { start, end } = calendarRange(calendarMonth);
+    const events = calendarEvents(start, end);
+    monthLabel.textContent = formatCalendarMonth(calendarMonth);
+
+    grid.innerHTML = Array.from({ length: 42 }, (_, index) => {
+      const date = addDays(start, index);
+      const key = dateString(date);
+      const dayEvents = events.get(key) || [];
+      const isOutside = date.getMonth() !== calendarMonth.getMonth();
+      const isPast = date < today;
+      const isToday = key === todayKey;
+      const isSelected = key === dateString(selectedDate);
+      const eventMarkup = dayEvents.slice(0, 2).map(event => `
+        <span class="calendar-event ${event.kind === "holiday" ? "calendar-event-holiday" : "calendar-event-time-off"}" title="${escapeHtml(calendarEventLabel(event))}">
+          <span class="calendar-event-dot"></span>
+          <span class="calendar-event-label">${escapeHtml(calendarEventLabel(event))}</span>
+        </span>
+      `).join("");
+      const moreMarkup = dayEvents.length > 2
+        ? `<span class="calendar-event-more">+${dayEvents.length - 2} more</span>`
+        : "";
+
+      return `
+        <button class="calendar-day${isOutside ? " is-outside" : ""}${isPast ? " is-past" : ""}${isToday ? " is-today" : ""}${isSelected ? " is-selected" : ""}" type="button" data-calendar-date="${key}" role="gridcell" aria-selected="${isSelected}" aria-label="${escapeHtml(formatCalendarDate(date))}${dayEvents.length ? `, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}` : ""}">
+          <span class="calendar-day-number">${date.getDate()}</span>
+          <span class="calendar-events">${eventMarkup}${moreMarkup}</span>
+        </button>
+      `;
+    }).join("");
+
+    renderCalendarSelection(events.get(dateString(selectedDate)) || [], selectedDate);
+  }
+
   function bindChartHover(points, chart) {
     const svg = $("chart");
     const hover = $("chart-hover");
@@ -942,6 +1073,7 @@
     renderRequests();
     renderBalanceView();
     renderChart();
+    renderCalendar();
     renderHolidays();
     renderVacations();
   }
@@ -1019,6 +1151,41 @@
   $("view-all-requests").addEventListener("click", () => openVacationModal(false, "", true));
   document.querySelectorAll("[data-open-requests]").forEach(button => {
     button.addEventListener("click", () => openVacationModal(true, button.dataset.openRequests));
+  });
+  $("calendar-prev").addEventListener("click", () => {
+    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+    calendarSelectedDate = dateString(calendarMonth);
+    renderCalendar();
+  });
+  $("calendar-next").addEventListener("click", () => {
+    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+    calendarSelectedDate = dateString(calendarMonth);
+    renderCalendar();
+  });
+  $("calendar-today").addEventListener("click", () => {
+    const today = todayDate();
+    calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    calendarSelectedDate = dateString(today);
+    renderCalendar();
+  });
+  $("calendar-grid").addEventListener("click", event => {
+    const day = event.target.closest("[data-calendar-date]");
+    if (!day) return;
+    const date = safeDate(day.dataset.calendarDate);
+    if (!date) return;
+    calendarSelectedDate = day.dataset.calendarDate;
+    if (date.getMonth() !== calendarMonth.getMonth() || date.getFullYear() !== calendarMonth.getFullYear()) {
+      calendarMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    }
+    renderCalendar();
+  });
+  $("calendar-selection").addEventListener("click", event => {
+    if (!event.target.closest("#calendar-add-time-off")) return;
+    resetVacationForm();
+    $("vacationStartDate").value = calendarSelectedDate;
+    $("vacationEndDate").value = calendarSelectedDate;
+    syncVacationMode();
+    openVacationModal(true);
   });
   $("guide-button").addEventListener("click", () => guideModal.showModal());
   $("guide-close").addEventListener("click", () => guideModal.close());
@@ -1179,6 +1346,7 @@
     renderRequests();
     renderBalanceView();
     renderChart();
+    renderCalendar();
     renderHolidays();
   }
 

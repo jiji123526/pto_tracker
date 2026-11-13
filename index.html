@@ -226,6 +226,31 @@
           </div>
         </section>
 
+        <section id="calendar-section">
+          <div class="section-heading">
+            <h2>Calendar</h2>
+            <small>Planned time off and observed holidays</small>
+          </div>
+          <div class="calendar-toolbar">
+            <button id="calendar-today" class="secondary small-button" type="button">Today</button>
+            <div class="calendar-month-nav">
+              <button id="calendar-prev" class="secondary small-button calendar-nav-button" type="button" aria-label="Previous month">‹</button>
+              <h3 id="calendar-month" aria-live="polite"></h3>
+              <button id="calendar-next" class="secondary small-button calendar-nav-button" type="button" aria-label="Next month">›</button>
+            </div>
+          </div>
+          <div class="calendar-legend" aria-label="Calendar legend">
+            <span class="calendar-legend-item calendar-legend-time-off">Planned time off</span>
+            <span class="calendar-legend-item calendar-legend-holiday">Holiday</span>
+            <span class="calendar-legend-item calendar-legend-today">Today</span>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="Monthly time-off calendar"></div>
+          <div id="calendar-selection" class="calendar-selection" aria-live="polite"></div>
+        </section>
+
         <section id="holidays-section">
           <details id="holidays-details">
             <summary class="holiday-summary">
